@@ -18,14 +18,20 @@ namespace fotoleuToolbox
         {
         }
 
-        private void buttonGenerate_Click(object sender, RibbonControlEventArgs e)
-        {
-            fotoleuToolbox.generateQRCode();
-        }
-
         private void buttonDocument_Click(object sender, RibbonControlEventArgs e)
         {
-            fotoleuToolbox.generateBill();
+            fotoleuToolbox.generateBill("");
+        }
+
+        private void buttonGenerate_Click(object sender, RibbonControlEventArgs e)
+        {
+            fotoleuToolbox.generateQRCode("");
+        }
+
+        private void buttonMerge_Click(object sender, RibbonControlEventArgs e)
+        {
+            fotoleuToolbox.generateDocument();
+
         }
     }
 }

@@ -1,14 +1,11 @@
 ﻿using Microsoft.Office.Core;
 using Microsoft.Office.Interop.Excel;
 using Microsoft.Office.Interop.Word;
-using Microsoft.Office.Tools.Excel;
-using Microsoft.Office.Tools.Ribbon;
 using QRCoder;
 using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace fotoleuToolbox
@@ -21,10 +18,54 @@ namespace fotoleuToolbox
 
         public void generateQRCodeInst()
 		{
-			generateQRCode();
+			generateQRCode(null);
 		}
 
-        public static void generateQRCode()
+
+        public static void generateBill(string strFilePath)
+        {
+            Boolean bDebug = false;
+            Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
+
+            try
+            {
+                debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
+                if (debug_sheet.get_Range("C2").Value2 == "ON")
+                {
+                    bDebug = true;
+                }
+            }
+            catch (Exception)
+            {
+                // Disable debugging; ignore exception
+            }
+
+            try
+            {
+                Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
+                string pathTemplate = sheet.get_Range("G9").Value2.ToString();
+
+                generateDocument(pathTemplate, strFilePath, "");
+            }
+            catch (Exception ex)
+            {
+                // Debug output
+                if (bDebug == true)
+                {
+                    Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
+                    debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+
+                    Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
+                    newdebugcell1.Value2 = "generateBill: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                }
+                else
+                {
+                    MessageBox.Show(ex.Message, "Bill Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        public static void generateQRCode(string strFilePath)
         {
             Boolean bDebug = false;
             Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
@@ -110,10 +151,10 @@ namespace fotoleuToolbox
                 qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
 
                 //sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, 180, 40, 140, 140);
-                float Left = (float)sheet.get_Range("B21").Value2;
-                float Top = (float)sheet.get_Range("B22").Value2;
-                float Width = (float)sheet.get_Range("B23").Value2;
-                float Height = (float)sheet.get_Range("B24").Value2;
+                float Left = ReadFloatValue(sheet.get_Range("B21").Value2);
+                float Top = ReadFloatValue(sheet.get_Range("B22").Value2);
+                float Width = ReadFloatValue(sheet.get_Range("B23").Value2);
+                float Height = ReadFloatValue(sheet.get_Range("B24").Value2);
                 if (Left > 0)
                 {
                     sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, Left, Top, Width, Height);
@@ -138,10 +179,10 @@ namespace fotoleuToolbox
                     Microsoft.Office.Interop.Excel.Range newdebugcell6 = debug_sheet.get_Range("F20");
                     newdebugcell6.Value2 = "IBAN: " + iban.ToString();
 
-                    float debugLeft = (float)debug_sheet.get_Range("C5").Value2;
-                    float debugTop = (float)debug_sheet.get_Range("C6").Value2;
-                    float debugWidth = (float)debug_sheet.get_Range("C7").Value2;
-                    float debugHeight = (float)debug_sheet.get_Range("C8").Value2;
+                    float debugLeft = ReadFloatValue(debug_sheet.get_Range("C5").Value2);
+                    float debugTop = ReadFloatValue(debug_sheet.get_Range("C6").Value2);
+                    float debugWidth = ReadFloatValue(debug_sheet.get_Range("C7").Value2);
+                    float debugHeight = ReadFloatValue(debug_sheet.get_Range("C8").Value2);
                     if (debugLeft > 0)
                     {
                         debug_sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, debugLeft, debugTop, debugWidth, debugHeight);
@@ -149,8 +190,15 @@ namespace fotoleuToolbox
                 }
 
                 // Replace QR code bitmap in template
-                string QRTemplatePath = sheet.get_Range("A29").Value2.ToString();
-                generateDocument(QRTemplatePath, picturePath);
+                string strQRTemplatePath = sheet.get_Range("A29").Value2.ToString();
+                if(strFilePath.Equals(""))
+                {
+                    if(sheet.get_Range("A31").Value2 != null)
+                    {
+                        strFilePath = sheet.get_Range("A31").Value2.ToString();
+                    }
+                }
+                generateDocument(strQRTemplatePath, strFilePath, picturePath);
 
                 // delete temporary picture
                 File.Delete(picturePath);
@@ -173,8 +221,19 @@ namespace fotoleuToolbox
             }
         }
 
+        private static float ReadFloatValue(dynamic value2)
+        {
+            if (value2 != null)
+            {
+                return (float)value2;
+            }
+            else
+            {
+                return 0;
+            }
+        }
 
-        public static void generateBill()
+        public static void generateDocument()
         {
             Boolean bDebug = false;
             Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
@@ -197,7 +256,84 @@ namespace fotoleuToolbox
                 Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
                 string pathTemplate = sheet.get_Range("G9").Value2.ToString();
 
-                generateDocument(pathTemplate,"");
+                string strFileTarget = "C:\\Users\\imfeldc\\source\\repos\\SwissQRCodeExcel4\\NewDoc.docx";
+                string strFile1 = "C:\\Users\\imfeldc\\source\\repos\\SwissQRCodeExcel4\\doc3.docx";
+                string strFile2 = "C:\\Users\\imfeldc\\source\\repos\\SwissQRCodeExcel4\\doc4.docx";
+
+                generateBill(strFile1);
+                generateQRCode(strFile2);
+
+                Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
+
+                // Open empty document
+                //Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Open(strFileTarget);
+                Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Add();
+                wordDocTarget.Activate();
+
+                /*
+                Microsoft.Office.Interop.Word.Range rng1 = wordApp.ActiveDocument.Range();
+                rng1.Collapse(WdCollapseDirection.wdCollapseEnd);
+                rng1.InsertFile(strFile1);
+                //rng1.InsertBreak(WdBreakType.wdSectionBreakNextPage);
+                rng1 = null;
+
+                Microsoft.Office.Interop.Word.Range rng2 = wordApp.ActiveDocument.Range();
+                rng2.Collapse(WdCollapseDirection.wdCollapseEnd);
+                rng2.InsertFile(strFile2);
+                rng2.InsertBreak(WdBreakType.wdSectionBreakNextPage);
+                rng2 = null;
+                */
+
+                
+                // Open first file and insert them
+                Microsoft.Office.Interop.Word.Document wordDoc1 = wordApp.Documents.Open(strFile1, ReadOnly: true);
+                wordDoc1.Fields.Update();
+                wordDoc1.Activate();
+                //wordApp.Selection.ClearFormatting();
+                wordApp.Selection.WholeStory();
+                wordApp.Selection.Copy();
+                wordDocTarget.Activate();
+                wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
+                wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
+                wordDoc1.Close(SaveChanges: false);
+                wordDoc1 = null;
+
+                // Open second file and insert them
+                Microsoft.Office.Interop.Word.Document wordDoc2 = wordApp.Documents.Open(strFile2, ReadOnly: true);
+                wordDoc2.Fields.Update();
+                wordDoc2.Activate();
+                //wordApp.Selection.ClearFormatting();
+                wordApp.Selection.WholeStory();
+                wordApp.Selection.Copy();
+                wordDocTarget.Activate();
+                wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
+                //wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
+                wordDoc2.Close(SaveChanges: false);
+                wordDoc2 = null;
+                
+
+
+                foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
+                {
+                }
+
+                if (wordDocTarget.Sections.Count == 2)
+                {
+                    // delete in 2nd section the header and footer
+                    //Section section = wordDocTarget.Sections[1];
+                    //section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
+                    //section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
+                    //section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
+                }
+
+
+                wordApp.Visible = true;
+                wordApp.Activate();
+                wordDocTarget.SaveAs2(strFileTarget);
+                wordDocTarget = null;
+
+                wordApp = null;
+
             }
             catch (Exception ex)
             {
@@ -208,17 +344,17 @@ namespace fotoleuToolbox
                     debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
 
                     Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                    newdebugcell1.Value2 = "generateBill: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                    newdebugcell1.Value2 = "generateDocument: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
                 }
                 else
                 {
-                    MessageBox.Show(ex.Message, "Bill Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(ex.Message, "Document Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
 
-        public static void generateDocument(string pathTemplate, string picturePath)
+        private static void generateDocument(string pathTemplate, string pathFilename, string picturePath)
         {
             Boolean bDebug = false;
             Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
@@ -238,6 +374,9 @@ namespace fotoleuToolbox
 
             if (File.Exists(pathTemplate))
             {
+                string strFilename="";
+                string strFilePath="";
+
                 try
                 {
                     Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
@@ -248,35 +387,38 @@ namespace fotoleuToolbox
                     int replaceCounter = 0;
                     foreach (Microsoft.Office.Interop.Excel.ListObject table in sheet.ListObjects)
                     {
+                        // The table "TabABBookmarks" contains three columns:
+                        // 1st column: BookmarkName         -> name of the bookmark
+                        // 2nd column: BookmarkValue        -> value which shall be insterted in final document
+                        // 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
                         if (table.Name == "TabABBookmarks")
                         {
                             Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
-                            String[] dataInRows = new string[tableRange.Rows.Count];
 
                             // Loop through rows ...
-                            int i = 0;
                             foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
                             {
                                 string strBookmarkValue = "";
                                 string strBookmarkPlaceholder = "";
 
-                                // For each row; loop through columns ...
-                                for (int j = 0; j < row.Columns.Count; j++)
+                                // Get bookmark value (1. column)
+                                string strBookmarkName = row.Cells[1, 1].Value2.ToString();
+                                if (strBookmarkName.Equals("Filename"))
                                 {
-                                    dataInRows[i] = dataInRows[i] + "_" + row.Cells[1, j + 1].Value2.ToString();
-
-                                    // Get bookmark value (2. column)
-                                    if (j == 1)
-                                    {
-                                        strBookmarkValue = row.Cells[1, j + 1].Value2.ToString();
-                                    }
-                                    // Get bookmark value (3. column)
-                                    if (j == 2)
-                                    {
-                                        strBookmarkPlaceholder = row.Cells[1, j + 1].Value2.ToString();
-                                    }
+                                    // Get filename (from 2. column) to be used to save this document
+                                    strFilename = row.Cells[1, 2].Value2.ToString();
                                 }
-                                i++;
+                                if (strBookmarkName.Equals("Filepath"))
+                                {
+                                    // Get filepath (from 2. column) to be used to save this document
+                                    strFilePath = row.Cells[1, 2].Value2.ToString();
+                                }
+
+                                // Get bookmark value (2. column)
+                                strBookmarkValue = row.Cells[1, 2].Value2.ToString();
+
+                                // Get bookmark value (3. column)
+                                strBookmarkPlaceholder = row.Cells[1, 3].Value2.ToString();
 
                                 // Replace bookmark ...
                                 if (!strBookmarkValue.Equals(""))
@@ -306,7 +448,7 @@ namespace fotoleuToolbox
                     }
 
                     // replace QR code bitmap with real bitmap
-                    if (!(picturePath == ""))
+                    if(!picturePath.Equals(""))
                     {
 
                         // Replace QR image in shapes
@@ -352,8 +494,25 @@ namespace fotoleuToolbox
                     wordDoc.Fields.Update();
                     wordDoc.Activate();
 
-                    wordApp.Visible = true;
-                    wordApp.Activate();
+                    // save document
+                    if(!strFilename.Equals(""))
+                    {
+                        wordDoc.SaveAs2(strFilePath + strFilename);
+                    }
+
+                    // save file OR show word app
+                    if (!pathFilename.Equals(""))
+                    {
+                        wordDoc.SaveAs2(pathFilename);
+                        wordDoc.Close(SaveChanges: false);
+                        wordApp.Quit();
+                    }
+                    else
+                    {
+                        wordApp.Visible = true;
+                        wordApp.Activate();
+                    }
+
 
                     wordDoc = null;
                     wordApp = null;
@@ -365,7 +524,7 @@ namespace fotoleuToolbox
                         debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
 
                         Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                        newdebugcell1.Value2 = "generateDocument: Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Path =" + pathTemplate + " at " + DateTime.Now.ToString();
+                        newdebugcell1.Value2 = "generateDocument: Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Template=" + pathTemplate + ", Filepath=" + pathFilename + " at " + DateTime.Now.ToString();
                     }
                 }
                 catch (Exception ex)

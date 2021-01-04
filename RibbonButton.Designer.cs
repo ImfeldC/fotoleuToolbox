@@ -39,6 +39,7 @@
             this.Label = this.Factory.CreateRibbonGroup();
             this.buttonDocument = this.Factory.CreateRibbonButton();
             this.buttonBill = this.Factory.CreateRibbonButton();
+            this.buttonMerge = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.Label.SuspendLayout();
             this.SuspendLayout();
@@ -55,6 +56,7 @@
             // 
             this.Label.Items.Add(this.buttonDocument);
             this.Label.Items.Add(this.buttonBill);
+            this.Label.Items.Add(this.buttonMerge);
             this.Label.Label = "fotoleu Toolbox";
             this.Label.Name = "Label";
             // 
@@ -73,6 +75,14 @@
             this.buttonBill.Name = "buttonBill";
             this.buttonBill.ShowImage = true;
             this.buttonBill.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonGenerate_Click);
+            // 
+            // buttonMerge
+            // 
+            this.buttonMerge.Image = global::fotoleuToolbox.Properties.Resources.multiple_files;
+            this.buttonMerge.Label = "Combine Documents";
+            this.buttonMerge.Name = "buttonMerge";
+            this.buttonMerge.ShowImage = true;
+            this.buttonMerge.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonMerge_Click);
             // 
             // RibbonButton
             // 
@@ -94,6 +104,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup Label;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonBill;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonDocument;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonMerge;
     }
 
     partial class ThisRibbonCollection

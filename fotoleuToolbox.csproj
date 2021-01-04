@@ -249,6 +249,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="CH-Kreuz_7mm.png" />
+    <None Include="multiple-files.png" />
     <None Include="edit-document.png" />
     <None Include="QRCode.bmp" />
   </ItemGroup>

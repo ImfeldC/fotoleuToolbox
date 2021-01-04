@@ -83,6 +83,16 @@ namespace fotoleuToolbox.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap multiple_files {
+            get {
+                object obj = ResourceManager.GetObject("multiple-files", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap QRCode {
             get {
                 object obj = ResourceManager.GetObject("QRCode", resourceCulture);
