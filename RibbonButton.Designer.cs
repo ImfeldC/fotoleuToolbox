@@ -38,6 +38,7 @@
             this.tab1 = this.Factory.CreateRibbonTab();
             this.Button = this.Factory.CreateRibbonGroup();
             this.buttonGenerate = this.Factory.CreateRibbonButton();
+            this.buttonDocument = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.Button.SuspendLayout();
             this.SuspendLayout();
@@ -53,16 +54,25 @@
             // Button
             // 
             this.Button.Items.Add(this.buttonGenerate);
+            this.Button.Items.Add(this.buttonDocument);
             this.Button.Label = "Swiss QR Code";
             this.Button.Name = "Button";
             // 
             // buttonGenerate
             // 
             this.buttonGenerate.Image = ((System.Drawing.Image)(resources.GetObject("buttonGenerate.Image")));
-            this.buttonGenerate.Label = "Generate";
+            this.buttonGenerate.Label = "Generate QR Code";
             this.buttonGenerate.Name = "buttonGenerate";
             this.buttonGenerate.ShowImage = true;
             this.buttonGenerate.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonGenerate_Click);
+            // 
+            // buttonDocument
+            // 
+            this.buttonDocument.Image = global::SwissQRCode.Properties.Resources.edit_document;
+            this.buttonDocument.Label = "Generate Document";
+            this.buttonDocument.Name = "buttonDocument";
+            this.buttonDocument.ShowImage = true;
+            this.buttonDocument.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonDocument_Click);
             // 
             // RibbonButton
             // 
@@ -83,6 +93,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonTab tab1;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup Button;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonGenerate;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonDocument;
     }
 
     partial class ThisRibbonCollection
