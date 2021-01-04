@@ -148,6 +148,11 @@ namespace SwissQRCode
                     }
                 }
 
+                // Replace QR code bitmap in template
+                string QRTemplatePath = sheet.get_Range("A29").Value2.ToString();
+                generateDocument(QRTemplatePath, picturePath);
+
+                // delete temporary picture
                 File.Delete(picturePath);
             }
             catch (Exception ex)
@@ -159,7 +164,7 @@ namespace SwissQRCode
                     debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
 
                     Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                    newdebugcell1.Value2 = "generateQRCode Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                    newdebugcell1.Value2 = "generateQRCode: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
                 }
                 else
                 {
@@ -169,7 +174,7 @@ namespace SwissQRCode
         }
 
 
-        public static void generateDocument()
+        public static void generateBill()
         {
             Boolean bDebug = false;
             Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
@@ -192,88 +197,7 @@ namespace SwissQRCode
                 Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
                 string pathTemplate = sheet.get_Range("G9").Value2.ToString();
 
-                Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
-                Microsoft.Office.Interop.Word.Document wordDoc = wordApp.Documents.Open(pathTemplate, ReadOnly:true);
-
-                // Replace "bookmarks" within word document with real values from excel sheet
-                int replaceCounter = 0;
-                foreach ( Microsoft.Office.Interop.Excel.ListObject table in sheet.ListObjects)
-                {
-                    if( table.Name == "TabABBookmarks")
-                    {
-                        Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
-                        String[] dataInRows = new string[tableRange.Rows.Count];
-
-                        // Loop through rows ...
-                        int i = 0;
-                        foreach(Microsoft.Office.Interop.Excel.Range row in tableRange.Rows )
-                        {
-                            string strBookmarkValue = "";
-                            string strBookmarkPlaceholder = "";
-
-                            // For each row; loop through columns ...
-                            for( int j=0; j<row.Columns.Count; j++)
-                            {
-                                dataInRows[i] = dataInRows[i] + "_" + row.Cells[1, j + 1].Value2.ToString();
-                                
-                                // Get bookmark value (2. column)
-                                if( j == 1 )
-                                {
-                                    strBookmarkValue = row.Cells[1, j + 1].Value2.ToString();
-                                }
-                                // Get bookmark value (3. column)
-                                if (j == 2)
-                                {
-                                    strBookmarkPlaceholder = row.Cells[1, j + 1].Value2.ToString();
-                                }
-                            }
-                            i++;
-
-                            // Replace bookmark ...
-                            if(!strBookmarkValue.Equals(""))
-                            {
-                                wordApp.Selection.Find.ClearFormatting();
-                                wordApp.Selection.Find.Replacement.ClearFormatting();
-
-                                wordApp.Selection.Find.Text = strBookmarkPlaceholder;
-                                wordApp.Selection.Find.Replacement.Text = strBookmarkValue;
-                                wordApp.Selection.Find.Forward = true;
-                                wordApp.Selection.Find.Wrap = WdFindWrap.wdFindAsk;
-                                wordApp.Selection.Find.Format = false;
-                                wordApp.Selection.Find.MatchCase = false;
-                                wordApp.Selection.Find.MatchWholeWord = false;
-                                wordApp.Selection.Find.MatchWildcards = false;
-                                wordApp.Selection.Find.MatchSoundsLike = false;
-                                wordApp.Selection.Find.MatchAllWordForms = false;
-
-                                bool bReplace = wordApp.Selection.Find.Execute(Replace: WdReplace.wdReplaceAll);
-                                if( bReplace )
-                                {
-                                    replaceCounter++;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                wordDoc.Fields.Update();
-                wordDoc.Activate();
-
-                wordApp.Visible = true;
-                wordApp.Activate();
-
-                wordDoc = null;
-                wordApp = null;
-
-                // Debug output
-                if (bDebug == true)
-                {
-                    Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                    debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                    Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                    newdebugcell1.Value2 = "Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Path =" + pathTemplate + " at " + DateTime.Now.ToString();
-                }
+                generateDocument(pathTemplate,"");
             }
             catch (Exception ex)
             {
@@ -284,11 +208,189 @@ namespace SwissQRCode
                     debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
 
                     Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                    newdebugcell1.Value2 = "generateDocument Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                    newdebugcell1.Value2 = "generateBill: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
                 }
                 else
                 {
-                    MessageBox.Show(ex.Message, "Document Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(ex.Message, "Bill Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+
+        public static void generateDocument(string pathTemplate, string picturePath)
+        {
+            Boolean bDebug = false;
+            Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
+
+            try
+            {
+                debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
+                if (debug_sheet.get_Range("C2").Value2 == "ON")
+                {
+                    bDebug = true;
+                }
+            }
+            catch (Exception)
+            {
+                // Disable debugging; ignore exception
+            }
+
+            if (File.Exists(pathTemplate))
+            {
+                try
+                {
+                    Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
+                    Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
+                    Microsoft.Office.Interop.Word.Document wordDoc = wordApp.Documents.Open(pathTemplate, ReadOnly: true);
+
+                    // Replace "bookmarks" within word document with real values from excel sheet
+                    int replaceCounter = 0;
+                    foreach (Microsoft.Office.Interop.Excel.ListObject table in sheet.ListObjects)
+                    {
+                        if (table.Name == "TabABBookmarks")
+                        {
+                            Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
+                            String[] dataInRows = new string[tableRange.Rows.Count];
+
+                            // Loop through rows ...
+                            int i = 0;
+                            foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
+                            {
+                                string strBookmarkValue = "";
+                                string strBookmarkPlaceholder = "";
+
+                                // For each row; loop through columns ...
+                                for (int j = 0; j < row.Columns.Count; j++)
+                                {
+                                    dataInRows[i] = dataInRows[i] + "_" + row.Cells[1, j + 1].Value2.ToString();
+
+                                    // Get bookmark value (2. column)
+                                    if (j == 1)
+                                    {
+                                        strBookmarkValue = row.Cells[1, j + 1].Value2.ToString();
+                                    }
+                                    // Get bookmark value (3. column)
+                                    if (j == 2)
+                                    {
+                                        strBookmarkPlaceholder = row.Cells[1, j + 1].Value2.ToString();
+                                    }
+                                }
+                                i++;
+
+                                // Replace bookmark ...
+                                if (!strBookmarkValue.Equals(""))
+                                {
+                                    wordApp.Selection.Find.ClearFormatting();
+                                    wordApp.Selection.Find.Replacement.ClearFormatting();
+
+                                    wordApp.Selection.Find.Text = strBookmarkPlaceholder;
+                                    wordApp.Selection.Find.Replacement.Text = strBookmarkValue;
+                                    wordApp.Selection.Find.Forward = true;
+                                    wordApp.Selection.Find.Wrap = WdFindWrap.wdFindAsk;
+                                    wordApp.Selection.Find.Format = false;
+                                    wordApp.Selection.Find.MatchCase = false;
+                                    wordApp.Selection.Find.MatchWholeWord = false;
+                                    wordApp.Selection.Find.MatchWildcards = false;
+                                    wordApp.Selection.Find.MatchSoundsLike = false;
+                                    wordApp.Selection.Find.MatchAllWordForms = false;
+
+                                    bool bReplace = wordApp.Selection.Find.Execute(Replace: WdReplace.wdReplaceAll);
+                                    if (bReplace)
+                                    {
+                                        replaceCounter++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // replace QR code bitmap with real bitmap
+                    if (!(picturePath == ""))
+                    {
+                        foreach (Microsoft.Office.Interop.Word.Shape s in wordDoc.Shapes)
+                        {
+                            if (s.AlternativeText.ToUpper().Contains("QRCODE"))
+                            {
+                                // replace shape
+                                Microsoft.Office.Interop.Word.Shape newShape = wordDoc.Shapes.AddPicture(picturePath, SaveWithDocument: true, Anchor: s.Anchor, Top: s.Top, Left: s.Left, Width: s.Width, Height: s.Height);
+                                newShape.RelativeHorizontalPosition = s.RelativeHorizontalPosition;
+                                newShape.RelativeHorizontalSize = s.RelativeHorizontalSize;
+                                newShape.RelativeVerticalPosition = s.RelativeVerticalPosition;
+                                newShape.RelativeVerticalSize = s.RelativeVerticalSize;
+                                newShape.Top = s.Top;
+                                newShape.Left = s.Left;
+                                newShape.Width = s.Width;
+                                newShape.Height = s.Height;
+                                newShape.Visible = MsoTriState.msoTrue;
+
+                                s.Delete();
+
+                            }
+                        }
+
+                        foreach (Microsoft.Office.Interop.Word.InlineShape s in wordDoc.InlineShapes)
+                        {
+                            if (s.AlternativeText.ToUpper().Contains("QRCODE"))
+                            {
+                                Microsoft.Office.Interop.Word.Range range;
+
+                                range = s.Range;
+                                Microsoft.Office.Interop.Word.InlineShape newShape = wordDoc.InlineShapes.AddPicture(picturePath, SaveWithDocument: true, Range: range);
+                                newShape.Width = s.Width;
+                                newShape.Height = s.Height;
+
+                                s.Delete();
+                            }
+                        }
+                    }
+
+                    wordDoc.Fields.Update();
+                    wordDoc.Activate();
+
+                    wordApp.Visible = true;
+                    wordApp.Activate();
+
+                    wordDoc = null;
+                    wordApp = null;
+
+                    // Debug output
+                    if (bDebug == true)
+                    {
+                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
+                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+
+                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
+                        newdebugcell1.Value2 = "generateDocument: Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Path =" + pathTemplate + " at " + DateTime.Now.ToString();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Debug output
+                    if (bDebug == true)
+                    {
+                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
+                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+
+                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
+                        newdebugcell1.Value2 = "generateDocument: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                    }
+                    else
+                    {
+                        MessageBox.Show(ex.Message, "Document Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+            else
+            {
+                // Debug output
+                if (bDebug == true)
+                {
+                    Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
+                    debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+
+                    Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
+                    newdebugcell1.Value2 = "generateDocument: Document '" + pathTemplate + "' doesn't exists; at " + DateTime.Now.ToString();
                 }
             }
         }

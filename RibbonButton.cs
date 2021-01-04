@@ -25,7 +25,7 @@ namespace SwissQRCode
 
         private void buttonDocument_Click(object sender, RibbonControlEventArgs e)
         {
-            SwissQRCode.generateDocument();
+            SwissQRCode.generateBill();
         }
     }
 }
