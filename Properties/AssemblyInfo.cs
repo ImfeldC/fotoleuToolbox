@@ -1,17 +1,17 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
 
-[assembly: AssemblyTitle("SwissQRCode")]
-[assembly: AssemblyDescription("QR code generator for Excel to be used in the Swiss banking sector")]
+[assembly: AssemblyTitle("fotoleuToolbox")]
+[assembly: AssemblyDescription("Tools used to create letters etc. incl. QR code for fotoleu")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("SwissQRCode")]
-[assembly: AssemblyCopyright("Copyright © 2020 Erich Barnstedt")]
+[assembly: AssemblyProduct("fotoleuToolbox")]
+[assembly: AssemblyCopyright("Copyright © 2021 Christian Imfeld")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
 [assembly: ComVisible(false)]
-[assembly: Guid("11ee838a-6ac2-4f22-a4f5-bc8317197ead")]
+[assembly: Guid("9B6844C7-54E4-40A1-AB47-DC9958000604")]
 
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("2.0.0.0")]
+[assembly: AssemblyFileVersion("2.0.0.0")]

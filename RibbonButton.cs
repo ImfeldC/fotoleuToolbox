@@ -10,7 +10,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace SwissQRCode
+namespace fotoleuToolbox
 {
     public partial class RibbonButton
     {
@@ -20,12 +20,12 @@ namespace SwissQRCode
 
         private void buttonGenerate_Click(object sender, RibbonControlEventArgs e)
         {
-            SwissQRCode.generateQRCode();
+            fotoleuToolbox.generateQRCode();
         }
 
         private void buttonDocument_Click(object sender, RibbonControlEventArgs e)
         {
-            SwissQRCode.generateBill();
+            fotoleuToolbox.generateBill();
         }
     }
 }

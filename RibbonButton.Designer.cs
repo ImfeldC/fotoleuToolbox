@@ -1,4 +1,4 @@
-﻿namespace SwissQRCode
+﻿namespace fotoleuToolbox
 {
     partial class RibbonButton : Microsoft.Office.Tools.Ribbon.RibbonBase
     {
@@ -36,43 +36,43 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(RibbonButton));
             this.tab1 = this.Factory.CreateRibbonTab();
-            this.Button = this.Factory.CreateRibbonGroup();
-            this.buttonGenerate = this.Factory.CreateRibbonButton();
+            this.Label = this.Factory.CreateRibbonGroup();
             this.buttonDocument = this.Factory.CreateRibbonButton();
+            this.buttonBill = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
-            this.Button.SuspendLayout();
+            this.Label.SuspendLayout();
             this.SuspendLayout();
             // 
             // tab1
             // 
             this.tab1.ControlId.ControlIdType = Microsoft.Office.Tools.Ribbon.RibbonControlIdType.Office;
             this.tab1.ControlId.OfficeId = "TabHome";
-            this.tab1.Groups.Add(this.Button);
+            this.tab1.Groups.Add(this.Label);
             this.tab1.Label = "TabHome";
             this.tab1.Name = "tab1";
             // 
-            // Button
+            // Label
             // 
-            this.Button.Items.Add(this.buttonGenerate);
-            this.Button.Items.Add(this.buttonDocument);
-            this.Button.Label = "Swiss QR Code";
-            this.Button.Name = "Button";
-            // 
-            // buttonGenerate
-            // 
-            this.buttonGenerate.Image = ((System.Drawing.Image)(resources.GetObject("buttonGenerate.Image")));
-            this.buttonGenerate.Label = "Generate QR Code";
-            this.buttonGenerate.Name = "buttonGenerate";
-            this.buttonGenerate.ShowImage = true;
-            this.buttonGenerate.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonGenerate_Click);
+            this.Label.Items.Add(this.buttonDocument);
+            this.Label.Items.Add(this.buttonBill);
+            this.Label.Label = "fotoleu Toolbox";
+            this.Label.Name = "Label";
             // 
             // buttonDocument
             // 
-            this.buttonDocument.Image = global::SwissQRCode.Properties.Resources.edit_document;
+            this.buttonDocument.Image = global::fotoleuToolbox.Properties.Resources.edit_document;
             this.buttonDocument.Label = "Generate Document";
             this.buttonDocument.Name = "buttonDocument";
             this.buttonDocument.ShowImage = true;
             this.buttonDocument.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonDocument_Click);
+            // 
+            // buttonBill
+            // 
+            this.buttonBill.Image = ((System.Drawing.Image)(resources.GetObject("buttonBill.Image")));
+            this.buttonBill.Label = "Generate Bill";
+            this.buttonBill.Name = "buttonBill";
+            this.buttonBill.ShowImage = true;
+            this.buttonBill.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonGenerate_Click);
             // 
             // RibbonButton
             // 
@@ -82,8 +82,8 @@
             this.Load += new Microsoft.Office.Tools.Ribbon.RibbonUIEventHandler(this.RibbonButton_Load);
             this.tab1.ResumeLayout(false);
             this.tab1.PerformLayout();
-            this.Button.ResumeLayout(false);
-            this.Button.PerformLayout();
+            this.Label.ResumeLayout(false);
+            this.Label.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -91,8 +91,8 @@
         #endregion
 
         internal Microsoft.Office.Tools.Ribbon.RibbonTab tab1;
-        internal Microsoft.Office.Tools.Ribbon.RibbonGroup Button;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonGenerate;
+        internal Microsoft.Office.Tools.Ribbon.RibbonGroup Label;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonBill;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonDocument;
     }
 

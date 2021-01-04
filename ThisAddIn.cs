@@ -1,4 +1,4 @@
-﻿namespace SwissQRCode
+﻿namespace fotoleuToolbox
 {
     public partial class ThisAddIn
     {

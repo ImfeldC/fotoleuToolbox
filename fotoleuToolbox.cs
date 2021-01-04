@@ -11,11 +11,11 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
-namespace SwissQRCode
+namespace fotoleuToolbox
 {
-	public class SwissQRCode
+	public class fotoleuToolbox
 	{
-		public SwissQRCode()
+		public fotoleuToolbox()
 		{
 		}
 
@@ -308,6 +308,9 @@ namespace SwissQRCode
                     // replace QR code bitmap with real bitmap
                     if (!(picturePath == ""))
                     {
+
+                        // Replace QR image in shapes
+                        // TODO: this code doesn't work yet; the image is NOT available/visible afterwards
                         foreach (Microsoft.Office.Interop.Word.Shape s in wordDoc.Shapes)
                         {
                             if (s.AlternativeText.ToUpper().Contains("QRCODE"))
@@ -329,6 +332,7 @@ namespace SwissQRCode
                             }
                         }
 
+                        // Replace QR image in "inline" shapes
                         foreach (Microsoft.Office.Interop.Word.InlineShape s in wordDoc.InlineShapes)
                         {
                             if (s.AlternativeText.ToUpper().Contains("QRCODE"))
