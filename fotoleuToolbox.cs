@@ -21,6 +21,7 @@ namespace fotoleuToolbox
         public static void generateBill(string strFilePath)
         {
             Boolean bDebug = openDebugSheet();
+            printDebugMessage("generateBill: Started ....");
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
             if( sheet != null )
@@ -49,6 +50,7 @@ namespace fotoleuToolbox
         public static void generateQRCode(string strFilePath)
         {
             Boolean bDebug = openDebugSheet();
+            printDebugMessage("generateQRCode: Started ....");
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("SwissQRCode");
             if (sheet != null)
@@ -177,6 +179,7 @@ namespace fotoleuToolbox
         {
             Boolean bDebug = openDebugSheet();
             string strAddDebugInfo = "";
+            printDebugMessage("generateDocument: Started ....");
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
             if (sheet != null)
@@ -184,12 +187,10 @@ namespace fotoleuToolbox
                 try
                 {
                     string pathTemplate = sheet.get_Range("G9").Value2.ToString();
-
-                    string strFileName = readBookmarkValue(sheet, "Filename");
-                    string strFilePath = readBookmarkValue(sheet, "Filepath");
-                    string strFileTarget = strFilePath + strFileName; ;
+                    strAddDebugInfo = "Template path read! pathTemplate=" + pathTemplate;
 
                     string strAuftragID = readBookmarkValue(sheet, "AuftragID");
+                    strAddDebugInfo = "AuftragID read! strAuftragID=" + strAuftragID;
                     string strGUID = Guid.NewGuid().ToString();
                     // Temporary 1st word document
                     string strFile1 = Path.GetTempPath() + "1stDoc_" + strAuftragID + "_" + strGUID + ".docx";
@@ -211,6 +212,7 @@ namespace fotoleuToolbox
                     Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
                     strAddDebugInfo = "Word Application created!";
 
+                    #region Open files and copy them to traget file.
                     // Open first file and insert them
                     Microsoft.Office.Interop.Word.Document wordDoc1 = wordApp.Documents.Open(strFile1, ReadOnly: true);
                     wordDoc1.Fields.Update();
@@ -248,6 +250,7 @@ namespace fotoleuToolbox
                     wordDoc2.Close(SaveChanges: false);
                     wordDoc2 = null;
                     strAddDebugInfo = "First Document into traget document copied!";
+                    #endregion
 
                     printDebugMessage("generateDocument: Target file has been created! Number of words=" + wordDocTarget.Words.Count);
 
@@ -286,13 +289,40 @@ namespace fotoleuToolbox
                         section.Footers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
                     }
 
+                    string strFileName = readBookmarkValue(sheet, "Filename");
+                    string strFilePath = readBookmarkValue(sheet, "Filepath");
+                    string strFileTarget = strFilePath + strFileName; ;
+                    strAddDebugInfo = "Target filename and path read! strFileName=" + strFileName + ", strFilePath=" + strFilePath + ", strFileTarget=" + strFileTarget;
+
+                    if (Directory.Exists(strFilePath))
+                    {
+                        wordDocTarget.SaveAs2(strFileTarget);
+                        printDebugMessage("generateDocument: Target file has been saved! strFileTarget=" + strFileTarget);
+                    }
+                    else
+                    {
+                        printDebugMessage("generateDocument: Path doesn't exists, cannot save file! strFilePath=" + strFilePath + ", strFileName=" + strFileName);
+                    }
+
                     wordApp.Visible = true;
                     wordApp.Activate();
-                    wordDocTarget.SaveAs2(strFileTarget);
-                    printDebugMessage("generateDocument: Target file has been saved! strFileTarget=" + strFileTarget);
 
                     wordDocTarget = null;
                     wordApp = null;
+
+                    if( !bDebug )
+                    {
+                        // Delete temporary files
+                        if (File.Exists(strFile1))
+                        {
+                            File.Delete(strFile1);
+                        }
+                        if (File.Exists(strFile2))
+                        {
+                            File.Delete(strFile2);
+                        }
+                        printDebugMessage("generateDocument: The two single files have been deleted! File1=" + strFile1 + ", File2=" + strFile2);
+                    }
 
                 }
                 catch (Exception ex)
@@ -316,9 +346,6 @@ namespace fotoleuToolbox
 
             if (File.Exists(pathTemplate))
             {
-                string strFilename="";
-                string strFilePath="";
-
                 try
                 {
                     Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
@@ -345,16 +372,6 @@ namespace fotoleuToolbox
 
                                 // Get bookmark value (1. column)
                                 string strBookmarkName = row.Cells[1, 1].Value2.ToString();
-                                if (strBookmarkName.Equals("Filename"))
-                                {
-                                    // Get filename (from 2. column) to be used to save this document
-                                    strFilename = row.Cells[1, 2].Value2.ToString();
-                                }
-                                if (strBookmarkName.Equals("Filepath"))
-                                {
-                                    // Get filepath (from 2. column) to be used to save this document
-                                    strFilePath = row.Cells[1, 2].Value2.ToString();
-                                }
 
                                 // Get bookmark value (2. column)
                                 strBookmarkValue = row.Cells[1, 2].Value2.ToString();
@@ -437,9 +454,18 @@ namespace fotoleuToolbox
                     wordDoc.Activate();
 
                     // save document
-                    if(!strFilename.Equals(""))
+                    string strFileName = readBookmarkValue(sheet, "Filename");
+                    string strFilePath = readBookmarkValue(sheet, "Filepath");
+                    if (!strFileName.Equals(""))
                     {
-                        wordDoc.SaveAs2(strFilePath + strFilename);
+                        if(Directory.Exists(strFilePath))
+                        {
+                            wordDoc.SaveAs2(strFilePath + strFileName);
+                        }
+                        else
+                        {
+                            printDebugMessage("generateDocument: Path doesn't exists, cannot save file! strFilePath=" + strFilePath + ", strFileName=" + strFileName);
+                        }
                     }
 
                     // save file OR show word app
@@ -596,6 +622,18 @@ namespace fotoleuToolbox
                 newdebugcell.Value2 = DateTime.Now.ToString();
                 newdebugcell = s_debug_sheet.get_Range("B20");
                 newdebugcell.Value2 = strDebugMessage;
+            }
+
+            try
+            {
+                Microsoft.Office.Interop.Excel.Application excelApp = new Microsoft.Office.Interop.Excel.Application();
+                excelApp.DisplayStatusBar = true;
+                excelApp.StatusBar = "Debug Message: " + strDebugMessage;
+            }
+            catch
+            {
+                // Ignore any exception
+                string strStatusBar = "Debug Message: " + strDebugMessage;
             }
         }
 
