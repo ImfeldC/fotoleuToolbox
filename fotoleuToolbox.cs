@@ -7,11 +7,13 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
+using System.Deployment.Application;
 
 namespace fotoleuToolbox
 {
 	public class fotoleuToolbox
 	{
+        private static string s_toolboxVersion = "";
         private static Microsoft.Office.Tools.Excel.Worksheet s_debug_sheet = null;
 
         public fotoleuToolbox()
@@ -21,7 +23,7 @@ namespace fotoleuToolbox
         public static void generateBill(string strFilePath)
         {
             Boolean bDebug = openDebugSheet();
-            printDebugMessage("generateBill: Started ....");
+            printDebugMessage("generateBill: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
             if( sheet != null )
@@ -50,7 +52,7 @@ namespace fotoleuToolbox
         public static void generateQRCode(string strFilePath)
         {
             Boolean bDebug = openDebugSheet();
-            printDebugMessage("generateQRCode: Started ....");
+            printDebugMessage("generateQRCode: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("SwissQRCode");
             if (sheet != null)
@@ -179,7 +181,7 @@ namespace fotoleuToolbox
         {
             Boolean bDebug = openDebugSheet();
             string strAddDebugInfo = "";
-            printDebugMessage("generateDocument: Started ....");
+            printDebugMessage("generateDocument: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
             if (sheet != null)
@@ -677,6 +679,23 @@ namespace fotoleuToolbox
                     s_debug_sheet.Shapes.AddPicture(strDebugImagePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, debugLeft, debugTop, debugWidth, debugHeight);
                 }
             }
+        }
+
+        public static string getCurrentToolboxVersion()
+        {
+            if( s_toolboxVersion.Equals(""))
+            {
+                try
+                {
+                    System.Version ver = ApplicationDeployment.CurrentDeployment.CurrentVersion;
+                    s_toolboxVersion = ver.Major.ToString() + "." + ver.Minor.ToString() + "." + ver.Build.ToString() + "." + ver.Revision.ToString();
+                }
+                catch
+                {
+                    s_toolboxVersion = "n/a";
+                }
+            }
+            return s_toolboxVersion;
         }
     }
 }
