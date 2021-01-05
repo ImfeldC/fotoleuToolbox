@@ -12,27 +12,15 @@ namespace fotoleuToolbox
 {
 	public class fotoleuToolbox
 	{
-		public fotoleuToolbox()
+        private static Microsoft.Office.Tools.Excel.Worksheet s_debug_sheet = null;
+
+        public fotoleuToolbox()
 		{
 		}
 
         public static void generateBill(string strFilePath)
         {
-            Boolean bDebug = false;
-            Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
-
-            try
-            {
-                debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
-                if (debug_sheet.get_Range("C2").Value2 == "ON")
-                {
-                    bDebug = true;
-                }
-            }
-            catch (Exception)
-            {
-                // Disable debugging; ignore exception
-            }
+            Boolean bDebug = openDebugSheet();
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
             if( sheet != null )
@@ -48,11 +36,7 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                        newdebugcell1.Value2 = "generateBill: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                        printDebugMessage("generateBill: Exception=" + ex.Message);
                     }
                     else
                     {
@@ -64,21 +48,7 @@ namespace fotoleuToolbox
 
         public static void generateQRCode(string strFilePath)
         {
-            Boolean bDebug = false;
-            Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
-
-            try
-            {
-                debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
-                if (debug_sheet.get_Range("C2").Value2 == "ON")
-                {
-                    bDebug = true;
-                }
-            }
-            catch (Exception)
-            {
-                // Disable debugging; ignore exception
-            }
+            Boolean bDebug = openDebugSheet();
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("SwissQRCode");
             if (sheet != null)
@@ -162,30 +132,8 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                        newdebugcell1.Value2 = "QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath + " at " + DateTime.Now.ToString();
-                        Microsoft.Office.Interop.Excel.Range newdebugcell2 = debug_sheet.get_Range("B20");
-                        newdebugcell2.Value2 = "Contact: " + contact.ToString();
-                        Microsoft.Office.Interop.Excel.Range newdebugcell3 = debug_sheet.get_Range("C20");
-                        newdebugcell3.Value2 = "Debitor: " + debitor.ToString();
-                        Microsoft.Office.Interop.Excel.Range newdebugcell4 = debug_sheet.get_Range("D20");
-                        newdebugcell4.Value2 = "Amount=" + amount.ToString() + " / Currency=" + currency.ToString();
-                        Microsoft.Office.Interop.Excel.Range newdebugcell5 = debug_sheet.get_Range("E20");
-                        newdebugcell5.Value2 = "Additional Information: UnstructureMessage=" + additionalInformation.UnstructureMessage + " / BillInformation=" + additionalInformation.BillInformation;
-                        Microsoft.Office.Interop.Excel.Range newdebugcell6 = debug_sheet.get_Range("F20");
-                        newdebugcell6.Value2 = "IBAN: " + iban.ToString();
-
-                        float debugLeft = readFloatValue(debug_sheet.get_Range("C5").Value2);
-                        float debugTop = readFloatValue(debug_sheet.get_Range("C6").Value2);
-                        float debugWidth = readFloatValue(debug_sheet.get_Range("C7").Value2);
-                        float debugHeight = readFloatValue(debug_sheet.get_Range("C8").Value2);
-                        if (debugLeft > 0)
-                        {
-                            debug_sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, debugLeft, debugTop, debugWidth, debugHeight);
-                        }
+                        printDebugMessage("QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath, contact.ToString(), debitor.ToString(), amount.ToString(), currency.ToString(), additionalInformation.UnstructureMessage, additionalInformation.BillInformation, iban.ToString());
+                        printDebugImage(picturePath);
                     }
 
                     // Replace QR code bitmap in template
@@ -207,11 +155,7 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                        newdebugcell1.Value2 = "generateQRCode: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                        printDebugMessage("generateQRCode: Exception=" + ex.Message);
                     }
                     else
                     {
@@ -223,21 +167,7 @@ namespace fotoleuToolbox
 
         public static void generateDocument()
         {
-            Boolean bDebug = false;
-            Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
-
-            try
-            {
-                debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
-                if (debug_sheet.get_Range("C2").Value2 == "ON")
-                {
-                    bDebug = true;
-                }
-            }
-            catch (Exception)
-            {
-                // Disable debugging; ignore exception
-            }
+            Boolean bDebug = openDebugSheet();
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
             if (sheet != null)
@@ -347,11 +277,7 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                        newdebugcell1.Value2 = "generateDocument: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                        printDebugMessage("generateDocument: Exception=" + ex.Message);
                     }
                     else
                     {
@@ -363,21 +289,7 @@ namespace fotoleuToolbox
 
         private static void generateDocument(string pathTemplate, string pathFilename, string picturePath)
         {
-            Boolean bDebug = false;
-            Microsoft.Office.Tools.Excel.Worksheet debug_sheet = null;
-
-            try
-            {
-                debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
-                if (debug_sheet.get_Range("C2").Value2 == "ON")
-                {
-                    bDebug = true;
-                }
-            }
-            catch (Exception)
-            {
-                // Disable debugging; ignore exception
-            }
+            Boolean bDebug = openDebugSheet();
 
             if (File.Exists(pathTemplate))
             {
@@ -527,11 +439,7 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                        newdebugcell1.Value2 = "generateDocument: Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Template=" + pathTemplate + ", Filepath=" + pathFilename + " at " + DateTime.Now.ToString();
+                        printDebugMessage("generateDocument: Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Template=" + pathTemplate + ", Filepath=" + pathFilename);
                     }
                 }
                 catch (Exception ex)
@@ -539,11 +447,7 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                        newdebugcell1.Value2 = "generateDocument: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                        printDebugMessage("generateDocument: Exception=" + ex.Message);
                     }
                     else
                     {
@@ -556,11 +460,7 @@ namespace fotoleuToolbox
                 // Debug output
                 if (bDebug == true)
                 {
-                    Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                    debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                    Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                    newdebugcell1.Value2 = "generateDocument: Document '" + pathTemplate + "' doesn't exists; at " + DateTime.Now.ToString();
+                    printDebugMessage("generateDocument: Document '" + pathTemplate + "' doesn't exists");
                 }
             }
         }
@@ -583,11 +483,18 @@ namespace fotoleuToolbox
 
         private static float readFloatValue(dynamic value2)
         {
-            if (value2 != null)
+            try
             {
-                return (float)value2;
+                if (value2 != null)
+                {
+                    return (float)value2;
+                }
+                else
+                {
+                    return 0;
+                }
             }
-            else
+            catch( Exception )
             {
                 return 0;
             }
@@ -625,6 +532,90 @@ namespace fotoleuToolbox
                 }
             }
             return strBookmarkValueFound;
+        }
+
+        private static bool openDebugSheet()
+        {
+            Boolean bDebug = false;
+            try
+            {
+                if(s_debug_sheet == null)
+                {
+                    s_debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
+                    if (s_debug_sheet.get_Range("D2").Value2 == "ON")
+                    {
+                        bDebug = true;
+                    }
+                }
+                else
+                {
+                    // debug sheet has already been opened
+                    bDebug = true;
+                }
+            }
+            catch (Exception)
+            {
+                // Disable debugging; ignore exception
+            }
+            return bDebug;
+        }
+
+        private static void printDebugMessage(string strDebugMessage)
+        {
+            // Debug output
+            if (s_debug_sheet != null)
+            {
+                Microsoft.Office.Interop.Excel.Range debugrows = s_debug_sheet.get_Range("A20");
+                debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+
+                Microsoft.Office.Interop.Excel.Range newdebugcell = null;
+                newdebugcell = s_debug_sheet.get_Range("A20");
+                newdebugcell.Value2 = DateTime.Now.ToString();
+                newdebugcell = s_debug_sheet.get_Range("B20");
+                newdebugcell.Value2 = strDebugMessage;
+            }
+        }
+
+        private static void printDebugMessage(string strDebugMessage, string strContact, string strDebitor, string strAmount, string strCurrency, string strUnstructuredMessage, string strBillInfo, string strIBAN)
+        {
+            // Debug output
+            if (s_debug_sheet != null)
+            {
+                Microsoft.Office.Interop.Excel.Range debugrows = s_debug_sheet.get_Range("A20");
+                debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+
+                Microsoft.Office.Interop.Excel.Range newdebugcell = null;
+                newdebugcell = s_debug_sheet.get_Range("A20");
+                newdebugcell.Value2 = DateTime.Now.ToString();
+                newdebugcell = s_debug_sheet.get_Range("B20");
+                newdebugcell.Value2 = strDebugMessage;
+                newdebugcell = s_debug_sheet.get_Range("C20");
+                newdebugcell.Value2 = "Contact: " + strContact;
+                newdebugcell = s_debug_sheet.get_Range("D20");
+                newdebugcell.Value2 = "Debitor: " + strDebitor;
+                newdebugcell = s_debug_sheet.get_Range("E20");
+                newdebugcell.Value2 = "Amount=" + strAmount + " / Currency=" + strCurrency;
+                newdebugcell = s_debug_sheet.get_Range("F20");
+                newdebugcell.Value2 = "Additional Information: UnstructureMessage=" + strUnstructuredMessage + " / BillInformation=" + strBillInfo;
+                newdebugcell = s_debug_sheet.get_Range("G20");
+                newdebugcell.Value2 = "IBAN: " + strIBAN;
+            }
+        }
+
+        private static void printDebugImage(string strDebugImagePath)
+        {
+            // Debug output
+            if (s_debug_sheet != null)
+            {
+                float debugLeft = readFloatValue(s_debug_sheet.get_Range("D5").Value2);
+                float debugTop = readFloatValue(s_debug_sheet.get_Range("D6").Value2);
+                float debugWidth = readFloatValue(s_debug_sheet.get_Range("D7").Value2);
+                float debugHeight = readFloatValue(s_debug_sheet.get_Range("D8").Value2);
+                if (debugLeft > 0)
+                {
+                    s_debug_sheet.Shapes.AddPicture(strDebugImagePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, debugLeft, debugTop, debugWidth, debugHeight);
+                }
+            }
         }
     }
 }
