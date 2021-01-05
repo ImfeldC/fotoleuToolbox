@@ -298,9 +298,16 @@ namespace fotoleuToolbox
                     //wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
                     wordDoc2.Close(SaveChanges: false);
                     wordDoc2 = null;
-                    wordApp.Selection.ClearFormatting();    // avoid word asking to keep clipboard when closing
+
+                    #region Empty clipbord
+                    // avoid word asking to keep clipboard when closing
+                    // avoid message box: "do you want to keep last item you copied" at exit of word.
+                    wordApp.Selection.ClearFormatting();    
                     wordApp.Selection.Find.ClearFormatting();
                     wordApp.Selection.Find.Replacement.ClearFormatting();
+                    wordApp.Selection.InsertAfter(" ");  // select a "single" space
+                    wordApp.Selection.Copy();            // "empty" clipboard, with a "single" space
+                    #endregion
 
                     foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
                     {
