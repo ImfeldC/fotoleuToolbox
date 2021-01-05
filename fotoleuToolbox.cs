@@ -315,15 +315,33 @@ namespace fotoleuToolbox
 
                 foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
                 {
+                    string strsection = "Section:" 
+                        + " Index=" + section.Index 
+                        + " Headers.Count=" + section.Headers.Count
+                        + " Foorters.Count" + section.Footers.Count
+                        + " =>"+ section.ToString();
+                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].LinkToPrevious = false;
+                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].LinkToPrevious = false;
+                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].LinkToPrevious = false;
                 }
 
                 if (wordDocTarget.Sections.Count == 2)
                 {
                     // delete in 2nd section the header and footer
-                    //Section section = wordDocTarget.Sections[1];
-                    //section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
-                    //section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
-                    //section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
+                    Section section = wordDocTarget.Sections[2];
+                    //section.PageSetup.DifferentFirstPageHeaderFooter = -1; //=true (see also WdConstants.wdUndefined);
+                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
+                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
+                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
+                }
+
+                foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
+                {
+                    string strsection = "Section:"
+                        + " Index=" + section.Index
+                        + " Headers.Count=" + section.Headers.Count
+                        + " Foorters.Count" + section.Footers.Count
+                        + " =>" + section.ToString();
                 }
 
 
