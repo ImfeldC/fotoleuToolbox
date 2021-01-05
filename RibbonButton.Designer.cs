@@ -37,9 +37,9 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(RibbonButton));
             this.tab1 = this.Factory.CreateRibbonTab();
             this.Label = this.Factory.CreateRibbonGroup();
-            this.buttonDocument = this.Factory.CreateRibbonButton();
-            this.buttonBill = this.Factory.CreateRibbonButton();
-            this.buttonMerge = this.Factory.CreateRibbonButton();
+            this.btnAuftragsblatt = this.Factory.CreateRibbonButton();
+            this.btnQR = this.Factory.CreateRibbonButton();
+            this.btnRechnung = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.Label.SuspendLayout();
             this.SuspendLayout();
@@ -54,35 +54,35 @@
             // 
             // Label
             // 
-            this.Label.Items.Add(this.buttonDocument);
-            this.Label.Items.Add(this.buttonBill);
-            this.Label.Items.Add(this.buttonMerge);
+            this.Label.Items.Add(this.btnAuftragsblatt);
+            this.Label.Items.Add(this.btnQR);
+            this.Label.Items.Add(this.btnRechnung);
             this.Label.Label = "fotoleu Toolbox";
             this.Label.Name = "Label";
             // 
-            // buttonDocument
+            // btnAuftragsblatt
             // 
-            this.buttonDocument.Image = global::fotoleuToolbox.Properties.Resources.edit_document;
-            this.buttonDocument.Label = "Generate Document";
-            this.buttonDocument.Name = "buttonDocument";
-            this.buttonDocument.ShowImage = true;
-            this.buttonDocument.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonDocument_Click);
+            this.btnAuftragsblatt.Image = global::fotoleuToolbox.Properties.Resources.edit_document;
+            this.btnAuftragsblatt.Label = "Erzeuge Auftragsblatt";
+            this.btnAuftragsblatt.Name = "btnAuftragsblatt";
+            this.btnAuftragsblatt.ShowImage = true;
+            this.btnAuftragsblatt.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnAuftragsblatt_Click);
             // 
-            // buttonBill
+            // btnQR
             // 
-            this.buttonBill.Image = ((System.Drawing.Image)(resources.GetObject("buttonBill.Image")));
-            this.buttonBill.Label = "Generate Bill";
-            this.buttonBill.Name = "buttonBill";
-            this.buttonBill.ShowImage = true;
-            this.buttonBill.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonGenerate_Click);
+            this.btnQR.Image = ((System.Drawing.Image)(resources.GetObject("btnQR.Image")));
+            this.btnQR.Label = "Erzeuge QR EZS";
+            this.btnQR.Name = "btnQR";
+            this.btnQR.ShowImage = true;
+            this.btnQR.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnQR_Click);
             // 
-            // buttonMerge
+            // btnRechnung
             // 
-            this.buttonMerge.Image = global::fotoleuToolbox.Properties.Resources.multiple_files;
-            this.buttonMerge.Label = "Combine Documents";
-            this.buttonMerge.Name = "buttonMerge";
-            this.buttonMerge.ShowImage = true;
-            this.buttonMerge.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.buttonMerge_Click);
+            this.btnRechnung.Image = global::fotoleuToolbox.Properties.Resources.multiple_files;
+            this.btnRechnung.Label = "Erzeuge Rechnung";
+            this.btnRechnung.Name = "btnRechnung";
+            this.btnRechnung.ShowImage = true;
+            this.btnRechnung.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.btnRechnung_Click);
             // 
             // RibbonButton
             // 
@@ -102,9 +102,9 @@
 
         internal Microsoft.Office.Tools.Ribbon.RibbonTab tab1;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup Label;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonBill;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonDocument;
-        internal Microsoft.Office.Tools.Ribbon.RibbonButton buttonMerge;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnQR;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnAuftragsblatt;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton btnRechnung;
     }
 
     partial class ThisRibbonCollection

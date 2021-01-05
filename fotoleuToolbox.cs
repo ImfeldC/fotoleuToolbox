@@ -20,10 +20,10 @@ namespace fotoleuToolbox
 		{
 		}
 
-        public static void generateBill(string strFilePath)
+        public static void generateAuftragsblatt(string strFilePath)
         {
             Boolean bDebug = openDebugSheet();
-            printDebugMessage("generateBill: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
+            printDebugMessage("generateAuftragsblatt: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
             if( sheet != null )
@@ -32,14 +32,14 @@ namespace fotoleuToolbox
                 {
                     string pathTemplate = sheet.get_Range("G9").Value2.ToString();
 
-                    generateDocument(pathTemplate, strFilePath, "");
+                    generateDocument(pathTemplate, strFilePath, "", "AB");
                 }
                 catch (Exception ex)
                 {
                     // Debug output
                     if (bDebug == true)
                     {
-                        printDebugMessage("generateBill: Exception=" + ex.Message);
+                        printDebugMessage("generateAuftragsblatt: Exception=" + ex.Message);
                     }
                     else
                     {
@@ -84,83 +84,104 @@ namespace fotoleuToolbox
 
                     PayloadGenerator.SwissQrCode.Reference reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.NON);
 
-                    decimal amount = (decimal)sheet.get_Range("A17").Value2;
-                    //PayloadGenerator.SwissQrCode.Currency currency = PayloadGenerator.SwissQrCode.Currency.CHF;
-                    PayloadGenerator.SwissQrCode.Currency currency;
-                    if (sheet.get_Range("A18").Value2 == "CHF")
-                    {
-                        currency = PayloadGenerator.SwissQrCode.Currency.CHF;
-                    }
-                    else if (sheet.get_Range("A18").Value2 == "CHF")
-                    {
-                        currency = PayloadGenerator.SwissQrCode.Currency.EUR;
-                    }
-                    else
-                    {
-                        throw new Exception("Currency not supported: " + sheet.get_Range("A18").Value2);
-                    }
-
-                    PayloadGenerator.SwissQrCode generator = new PayloadGenerator.SwissQrCode(iban, currency, contact, reference, additionalInformation, debitor, amount);
-
-                    QRCodeGenerator qrGenerator = new QRCodeGenerator();
-                    QRCodeData qrCodeData = qrGenerator.CreateQrCode(generator.ToString(), QRCodeGenerator.ECCLevel.M);
-                    QRCode qrCode = new QRCode(qrCodeData);
-                    Bitmap qrCodeAsBitmap = qrCode.GetGraphic(20, Color.Black, Color.White, Properties.Resources.CH_Kreuz_7mm, 14, 1);
-
-                    // Temporary qrcode bitmap
-                    string picturePath = Path.GetTempPath() + "qrcode.bmp";
-                    if (File.Exists(picturePath))
-                    {
-                        File.Delete(picturePath);
-                    }
-                    qrCodeAsBitmap.Save(picturePath, ImageFormat.Bmp);
-
-                    // alternative qrcode bitmap
-                    string altpicturePath = sheet.get_Range("A26").Value2.ToString();
-                    if (File.Exists(altpicturePath))
-                    {
-                        File.Delete(altpicturePath);
-                    }
+                    string strAmount = sheet.get_Range("A17").Value2.ToString();
+                    decimal amount = -1;
                     try
-                    {   // save bitmap on alternative path
-                        qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
+                    {
+                        amount = decimal.Parse(strAmount);
                     }
                     catch
                     {
-                        // catch expception, e.g. in case filepath is not valid/accesible
-                        printDebugMessage("generateQRCode: Cannot save QR code bitmap to alternative path! altpicturePath=" + altpicturePath);
+                        // value cannot be converted in a "valid" decimal --> skip QR code production
+                        printDebugMessage("generateQRCode: Amount value cannot be converted in a 'valid' decimal --> skip QR code production! strAmount=" + strAmount);
+                        amount = -1;
                     }
-
-                    //sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, 180, 40, 140, 140);
-                    float Left = readFloatValue(sheet.get_Range("B21").Value2);
-                    float Top = readFloatValue(sheet.get_Range("B22").Value2);
-                    float Width = readFloatValue(sheet.get_Range("B23").Value2);
-                    float Height = readFloatValue(sheet.get_Range("B24").Value2);
-                    if (Left > 0)
+                    if( amount >= 0 )
                     {
-                        sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, Left, Top, Width, Height);
-                    }
-
-                    // Debug output
-                    if (bDebug == true)
-                    {
-                        printDebugMessage("QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath, contact.ToString(), debitor.ToString(), amount.ToString(), currency.ToString(), additionalInformation.UnstructureMessage, additionalInformation.BillInformation, iban.ToString());
-                        printDebugImage(picturePath);
-                    }
-
-                    // Replace QR code bitmap in template
-                    string strQRTemplatePath = sheet.get_Range("A29").Value2.ToString();
-                    if (strFilePath.Equals(""))
-                    {
-                        if (sheet.get_Range("A31").Value2 != null)
+                        #region Retrieve Currency
+                        //PayloadGenerator.SwissQrCode.Currency currency = PayloadGenerator.SwissQrCode.Currency.CHF;
+                        PayloadGenerator.SwissQrCode.Currency currency;
+                        if (sheet.get_Range("A18").Value2 == "CHF")
                         {
-                            strFilePath = sheet.get_Range("A31").Value2.ToString();
+                            currency = PayloadGenerator.SwissQrCode.Currency.CHF;
                         }
-                    }
-                    generateDocument(strQRTemplatePath, strFilePath, picturePath);
+                        else if (sheet.get_Range("A18").Value2 == "CHF")
+                        {
+                            currency = PayloadGenerator.SwissQrCode.Currency.EUR;
+                        }
+                        else
+                        {
+                            throw new Exception("Currency not supported: " + sheet.get_Range("A18").Value2);
+                        }
+                        #endregion
 
-                    // delete temporary picture
-                    File.Delete(picturePath);
+                        // Create QR Code
+                        PayloadGenerator.SwissQrCode generator = new PayloadGenerator.SwissQrCode(iban, currency, contact, reference, additionalInformation, debitor, amount);
+
+                        QRCodeGenerator qrGenerator = new QRCodeGenerator();
+                        QRCodeData qrCodeData = qrGenerator.CreateQrCode(generator.ToString(), QRCodeGenerator.ECCLevel.M);
+                        QRCode qrCode = new QRCode(qrCodeData);
+                        Bitmap qrCodeAsBitmap = qrCode.GetGraphic(20, Color.Black, Color.White, Properties.Resources.CH_Kreuz_7mm, 14, 1);
+
+                        #region Save QR code bitmap, to be used in further processing
+                        // Temporary qrcode bitmap
+                        string picturePath = Path.GetTempPath() + "qrcode.bmp";
+                        if (File.Exists(picturePath))
+                        {
+                            File.Delete(picturePath);
+                        }
+                        qrCodeAsBitmap.Save(picturePath, ImageFormat.Bmp);
+                        #endregion
+
+                        #region Save QR code bitmap to an addtional (atlernative) file
+                        // alternative qrcode bitmap
+                        string altpicturePath = sheet.get_Range("A26").Value2.ToString();
+                        if (File.Exists(altpicturePath))
+                        {
+                            File.Delete(altpicturePath);
+                        }
+                        try
+                        {   // save bitmap on alternative path
+                            qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
+                        }
+                        catch
+                        {
+                            // catch expception, e.g. in case filepath is not valid/accesible
+                            printDebugMessage("generateQRCode: Cannot save QR code bitmap to alternative path! altpicturePath=" + altpicturePath);
+                        }
+                        #endregion
+
+                        //sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, 180, 40, 140, 140);
+                        float Left = readFloatValue(sheet.get_Range("B21").Value2);
+                        float Top = readFloatValue(sheet.get_Range("B22").Value2);
+                        float Width = readFloatValue(sheet.get_Range("B23").Value2);
+                        float Height = readFloatValue(sheet.get_Range("B24").Value2);
+                        if (Left > 0)
+                        {
+                            sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, Left, Top, Width, Height);
+                        }
+
+                        // Debug output
+                        if (bDebug == true)
+                        {
+                            printDebugMessage("QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath, contact.ToString(), debitor.ToString(), amount.ToString(), currency.ToString(), additionalInformation.UnstructureMessage, additionalInformation.BillInformation, iban.ToString());
+                            printDebugImage(picturePath);
+                        }
+
+                        // Replace QR code bitmap in template
+                        string strQRTemplatePath = sheet.get_Range("A29").Value2.ToString();
+                        if (strFilePath.Equals(""))
+                        {
+                            if (sheet.get_Range("A31").Value2 != null)
+                            {
+                                strFilePath = sheet.get_Range("A31").Value2.ToString();
+                            }
+                        }
+                        generateDocument(strQRTemplatePath, strFilePath, picturePath, "ORESZ");
+
+                        // delete temporary picture
+                        File.Delete(picturePath);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -177,11 +198,13 @@ namespace fotoleuToolbox
             }
         }
 
-        public static void generateDocument()
+        public static void generateRechnung()
         {
+            Microsoft.Office.Interop.Word.Application wordApp = null;
+
             Boolean bDebug = openDebugSheet();
             string strAddDebugInfo = "";
-            printDebugMessage("generateDocument: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
+            printDebugMessage("generateRechnung: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
             if (sheet != null)
@@ -207,112 +230,140 @@ namespace fotoleuToolbox
                         File.Delete(strFile2);
                     }
 
-                    generateBill(strFile1);     // generate billing information (w/o QR code)
-                    generateQRCode(strFile2);   // generate QR code document
-                    printDebugMessage("generateDocument: The two single files have been created! File1=" + strFile1 + ", File2=" + strFile2);
-
-                    Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
-                    strAddDebugInfo = "Word Application created!";
-
-                    #region Open files and copy them to traget file.
-                    // Open first file and insert them
-                    Microsoft.Office.Interop.Word.Document wordDoc1 = wordApp.Documents.Open(strFile1, ReadOnly: true);
-                    wordDoc1.Fields.Update();
-                    strAddDebugInfo = "Doc1 fields updated!";
-                    wordDoc1.Activate();
-                    strAddDebugInfo = "Doc1 activated!";
-                    wordApp.Selection.WholeStory();
-                    strAddDebugInfo = "Select 'WholeStory'!";
-                    wordApp.Selection.Copy();
-                    strAddDebugInfo = "Selection copied!";
-                    // Open empty document
-                    //Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Open(strFileTarget);
-                    Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Add();
-                    wordDocTarget.Activate();
-                    strAddDebugInfo = "Target document activated (first time)!";
-                    wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
-                    strAddDebugInfo = "clipboard into target document pasted!";
-                    wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
-                    strAddDebugInfo = "Section break inserted into target document!";
-                    wordDoc1.Close(SaveChanges: false);
-                    strAddDebugInfo = "Doc1 document closed!";
-                    wordDoc1 = null;
-                    strAddDebugInfo = "First Document into traget document copied!";
-
-                    // Open second file and insert them
-                    Microsoft.Office.Interop.Word.Document wordDoc2 = wordApp.Documents.Open(strFile2, ReadOnly: true);
-                    wordDoc2.Fields.Update();
-                    wordDoc2.Activate();
-                    wordApp.Selection.WholeStory();
-                    wordApp.Selection.Copy();
-                    wordDocTarget.Activate();
-                    strAddDebugInfo = "Target document activated (second time)!";
-                    wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
-                    //wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
-                    wordDoc2.Close(SaveChanges: false);
-                    wordDoc2 = null;
-                    strAddDebugInfo = "First Document into traget document copied!";
-                    #endregion
-
-                    printDebugMessage("generateDocument: Target file has been created! Number of words=" + wordDocTarget.Words.Count);
-
-                    #region Empty clipbord
-                    // avoid word asking to keep clipboard when closing
-                    // avoid message box: "do you want to keep last item you copied" at exit of word.
-                    wordApp.Selection.ClearFormatting();    
-                    wordApp.Selection.Find.ClearFormatting();
-                    wordApp.Selection.Find.Replacement.ClearFormatting();
-                    wordApp.Selection.InsertAfter(" ");  // select a "single" space
-                    wordApp.Selection.Copy();            // "empty" clipboard, with a "single" space
-                    #endregion
-
-                    foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
+                    generateAuftragsblatt(strFile1);     // generate billing information (w/o QR code)
+                    #region Check that file exists
+                    if ( File.Exists(strFile1))
                     {
-                        // Do not link headers & footers with previous section
-                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].LinkToPrevious = false;
-                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].LinkToPrevious = false;
-                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].LinkToPrevious = false;
-                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterPrimary].LinkToPrevious = false;
-                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].LinkToPrevious = false;
-                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].LinkToPrevious = false;
-                    }
-
-                    if (wordDocTarget.Sections.Count == 2)
-                    {
-                        // delete in 2nd section the header and footer
-                        // NOTE: I had to use index 2; even I'm used to provide 0-based indexes. Not sure, but it works :-)
-                        Section section = wordDocTarget.Sections[2];
-                        //section.PageSetup.DifferentFirstPageHeaderFooter = -1; //=true (see also WdConstants.wdUndefined);
-                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
-                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
-                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
-                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
-                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
-                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
-                    }
-
-                    string strFileName = readBookmarkValue(sheet, "Filename");
-                    string strFilePath = readBookmarkValue(sheet, "Filepath");
-                    string strFileTarget = strFilePath + strFileName; ;
-                    strAddDebugInfo = "Target filename and path read! strFileName=" + strFileName + ", strFilePath=" + strFilePath + ", strFileTarget=" + strFileTarget;
-
-                    if (Directory.Exists(strFilePath))
-                    {
-                        wordDocTarget.SaveAs2(strFileTarget);
-                        printDebugMessage("generateDocument: Target file has been saved! strFileTarget=" + strFileTarget);
+                        printDebugMessage("generateRechnung: The first file has been created! File1=" + strFile1);
                     }
                     else
                     {
-                        printDebugMessage("generateDocument: Path doesn't exists, cannot save file! strFilePath=" + strFilePath + ", strFileName=" + strFileName);
+                        printDebugMessage("generateRechnung: The first file has NOT been created! File1=" + strFile1);
+                    }
+                    #endregion
+                    generateQRCode(strFile2);   // generate QR code document
+                    #region Check that file exists
+                    if (File.Exists(strFile2))
+                    {
+                        printDebugMessage("generateRechnung: The second file has been created! File2=" + strFile2);
+                    }
+                    else
+                    {
+                        printDebugMessage("generateRechnung: The second file has NOT been created! File2=" + strFile2);
+                    }
+                    #endregion
+
+                    if (File.Exists(strFile1) && File.Exists(strFile2))
+                    {
+                        wordApp = new Microsoft.Office.Interop.Word.Application();
+                        strAddDebugInfo = "Word Application created!";
+
+                        #region Open files and copy them to target file.
+                        // Open first file and insert them
+                        Microsoft.Office.Interop.Word.Document wordDoc1 = wordApp.Documents.Open(strFile1, ReadOnly: true);
+                        wordDoc1.Fields.Update();
+                        strAddDebugInfo = "Doc1 fields updated!";
+                        wordDoc1.Activate();
+                        strAddDebugInfo = "Doc1 activated!";
+                        wordApp.Selection.WholeStory();
+                        strAddDebugInfo = "Select 'WholeStory'!";
+                        wordApp.Selection.Copy();
+                        strAddDebugInfo = "Selection copied!";
+                        // Open empty document
+                        //Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Open(strFileTarget);
+                        Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Add();
+                        wordDocTarget.Activate();
+                        strAddDebugInfo = "Target document activated (first time)!";
+                        wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
+                        strAddDebugInfo = "clipboard into target document pasted!";
+                        wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
+                        strAddDebugInfo = "Section break inserted into target document!";
+                        wordDoc1.Close(SaveChanges: false);
+                        strAddDebugInfo = "Doc1 document closed!";
+                        wordDoc1 = null;
+                        strAddDebugInfo = "First Document into traget document copied!";
+
+                        // Open second file and insert them
+                        Microsoft.Office.Interop.Word.Document wordDoc2 = wordApp.Documents.Open(strFile2, ReadOnly: true);
+                        wordDoc2.Fields.Update();
+                        wordDoc2.Activate();
+                        wordApp.Selection.WholeStory();
+                        wordApp.Selection.Copy();
+                        wordDocTarget.Activate();
+                        strAddDebugInfo = "Target document activated (second time)!";
+                        wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
+                        //wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
+                        wordDoc2.Close(SaveChanges: false);
+                        wordDoc2 = null;
+                        strAddDebugInfo = "First Document into traget document copied!";
+                        #endregion
+
+                        printDebugMessage("generateRechnung: Target file has been created! Number of words=" + wordDocTarget.Words.Count);
+
+                        #region Empty clipbord
+                        // avoid word asking to keep clipboard when closing
+                        // avoid message box: "do you want to keep last item you copied" at exit of word.
+                        wordApp.Selection.ClearFormatting();
+                        wordApp.Selection.Find.ClearFormatting();
+                        wordApp.Selection.Find.Replacement.ClearFormatting();
+                        wordApp.Selection.InsertAfter(" ");  // select a "single" space
+                        wordApp.Selection.Copy();            // "empty" clipboard, with a "single" space
+                        #endregion
+
+                        foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
+                        {
+                            // Do not link headers & footers with previous section
+                            section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].LinkToPrevious = false;
+                            section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].LinkToPrevious = false;
+                            section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].LinkToPrevious = false;
+                            section.Footers[WdHeaderFooterIndex.wdHeaderFooterPrimary].LinkToPrevious = false;
+                            section.Footers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].LinkToPrevious = false;
+                            section.Footers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].LinkToPrevious = false;
+                        }
+
+                        if (wordDocTarget.Sections.Count == 2)
+                        {
+                            // delete in 2nd section the header and footer
+                            // NOTE: I had to use index 2; even I'm used to provide 0-based indexes. Not sure, but it works :-)
+                            Section section = wordDocTarget.Sections[2];
+                            //section.PageSetup.DifferentFirstPageHeaderFooter = -1; //=true (see also WdConstants.wdUndefined);
+                            section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
+                            section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
+                            section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
+                            section.Footers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
+                            section.Footers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
+                            section.Footers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
+                        }
+
+                        string strFileName = readBookmarkValue(sheet, "Filename");
+                        string strFilePath = readBookmarkValue(sheet, "Filepath");
+                        string strFileTarget = strFilePath + strFileName; ;
+                        strAddDebugInfo = "Target filename and path read! strFileName=" + strFileName + ", strFilePath=" + strFilePath + ", strFileTarget=" + strFileTarget;
+
+                        if (Directory.Exists(strFilePath))
+                        {
+                            wordDocTarget.SaveAs2(strFileTarget);
+                            printDebugMessage("generateRechnung: Target file has been saved! strFileTarget=" + strFileTarget);
+                        }
+                        else
+                        {
+                            printDebugMessage("generateRechnung: Path doesn't exists, cannot save file! strFilePath=" + strFilePath + ", strFileName=" + strFileName);
+                        }
+                        wordApp.Visible = true;
+                        wordApp.Activate();
+
+                        wordDocTarget = null;
+                        wordApp = null;
+
+                    }
+                    else
+                    {
+                        // One or both files doesn't exists -> skip production of combined document
+                        printDebugMessage("generateRechnung: One or both files doesn't exist -> skip production of combined document");
                     }
 
-                    wordApp.Visible = true;
-                    wordApp.Activate();
-
-                    wordDocTarget = null;
-                    wordApp = null;
-
-                    if( !bDebug )
+                    #region Delete temporary files
+                    if (!bDebug)
                     {
                         // Delete temporary files
                         if (File.Exists(strFile1))
@@ -323,8 +374,9 @@ namespace fotoleuToolbox
                         {
                             File.Delete(strFile2);
                         }
-                        printDebugMessage("generateDocument: The two single files have been deleted! File1=" + strFile1 + ", File2=" + strFile2);
+                        printDebugMessage("generateRechnung: The two single files have been deleted! File1=" + strFile1 + ", File2=" + strFile2);
                     }
+                    #endregion
 
                 }
                 catch (Exception ex)
@@ -332,26 +384,32 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        printDebugMessage("generateDocument: Exception=" + ex.Message + ", strAddDebugInfo=" + strAddDebugInfo);
+                        printDebugMessage("generateRechnung: Exception=" + ex.Message + ", strAddDebugInfo=" + strAddDebugInfo);
                     }
                     else
                     {
                         MessageBox.Show(ex.Message, "Document Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
+                    if( (wordApp!=null) && (!wordApp.Visible) )
+                    {
+                        // Word APP is not visible yet -> close it
+                        wordApp.Quit(SaveChanges: false);
+                    }
                 }
             }
         }
 
-        private static void generateDocument(string pathTemplate, string pathFilename, string picturePath)
+        private static void generateDocument(string pathTemplate, string pathFilename, string picturePath, string strFileNameSuffix)
         {
             Boolean bDebug = openDebugSheet();
 
             if (File.Exists(pathTemplate))
             {
+                Microsoft.Office.Interop.Word.Application wordApp = null;
                 try
                 {
                     Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
-                    Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
+                    wordApp = new Microsoft.Office.Interop.Word.Application();
                     Microsoft.Office.Interop.Word.Document wordDoc = wordApp.Documents.Open(pathTemplate, ReadOnly: true);
 
                     // Replace "bookmarks" within word document with real values from excel sheet
@@ -457,11 +515,16 @@ namespace fotoleuToolbox
 
                     // save document
                     string strFileName = readBookmarkValue(sheet, "Filename");
-                    string strFilePath = readBookmarkValue(sheet, "Filepath");
                     if (!strFileName.Equals(""))
                     {
-                        if(Directory.Exists(strFilePath))
+                        string strFilePath = readBookmarkValue(sheet, "Filepath");
+                        if (Directory.Exists(strFilePath))
                         {
+                            // add suffix - if available - to the filename
+                            if( !strFileNameSuffix.Equals(""))
+                            {
+                                strFileName = strFileName.Replace(".docx", "_" + strFileNameSuffix + ".docx");
+                            }
                             wordDoc.SaveAs2(strFilePath + strFileName);
                         }
                         else
@@ -503,6 +566,11 @@ namespace fotoleuToolbox
                     else
                     {
                         MessageBox.Show(ex.Message, "Document Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    if ((wordApp != null) && (!wordApp.Visible))
+                    {
+                        // Word APP is not visible yet -> close it
+                        wordApp.Quit(SaveChanges: false);
                     }
                 }
             }
