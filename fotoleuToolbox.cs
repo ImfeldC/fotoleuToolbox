@@ -16,12 +16,6 @@ namespace fotoleuToolbox
 		{
 		}
 
-        public void generateQRCodeInst()
-		{
-			generateQRCode(null);
-		}
-
-
         public static void generateBill(string strFilePath)
         {
             Boolean bDebug = false;
@@ -40,27 +34,30 @@ namespace fotoleuToolbox
                 // Disable debugging; ignore exception
             }
 
-            try
+            Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
+            if( sheet != null )
             {
-                Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
-                string pathTemplate = sheet.get_Range("G9").Value2.ToString();
-
-                generateDocument(pathTemplate, strFilePath, "");
-            }
-            catch (Exception ex)
-            {
-                // Debug output
-                if (bDebug == true)
+                try
                 {
-                    Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                    debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+                    string pathTemplate = sheet.get_Range("G9").Value2.ToString();
 
-                    Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                    newdebugcell1.Value2 = "generateBill: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                    generateDocument(pathTemplate, strFilePath, "");
                 }
-                else
+                catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, "Bill Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // Debug output
+                    if (bDebug == true)
+                    {
+                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
+                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+
+                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
+                        newdebugcell1.Value2 = "generateBill: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                    }
+                    else
+                    {
+                        MessageBox.Show(ex.Message, "Bill Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
             }
         }
@@ -83,153 +80,144 @@ namespace fotoleuToolbox
                 // Disable debugging; ignore exception
             }
 
-            try
+            Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("SwissQRCode");
+            if (sheet != null)
             {
-                Microsoft.Office.Tools.Excel.Worksheet activesheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.ActiveSheet);
-                Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode"]);
-
-                string contactIBAN = sheet.get_Range("A2").Value2.ToString();
-                PayloadGenerator.SwissQrCode.Iban iban = new PayloadGenerator.SwissQrCode.Iban(contactIBAN, PayloadGenerator.SwissQrCode.Iban.IbanType.Iban);
-
-                string contactName = sheet.get_Range("A3").Value2.ToString();
-                string contactStreet = sheet.get_Range("A4").Value2.ToString();
-                string contactPlace = sheet.get_Range("A5").Value2.ToString();
-                string contactCountry = sheet.get_Range("A6").Value2.ToString();
-                //PayloadGenerator.SwissQrCode.Contact contact = new PayloadGenerator.SwissQrCode.Contact(contactName, "CH", contactStreet, contactPlace);
-                PayloadGenerator.SwissQrCode.Contact contact = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(contactName, contactCountry, contactStreet, contactPlace);
-
-                string debitorName = sheet.get_Range("A12").Value2.ToString();
-                string debitorStreet = sheet.get_Range("A13").Value2.ToString();
-                string debitorPlace = sheet.get_Range("A14").Value2.ToString();
-                string debitorCountry = sheet.get_Range("A15").Value2.ToString();
-                //PayloadGenerator.SwissQrCode.Contact debitor = new PayloadGenerator.SwissQrCode.Contact(debitorName, "CH", debitorStreet, debitorPlace);
-                PayloadGenerator.SwissQrCode.Contact debitor = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(debitorName, debitorCountry, debitorStreet, debitorPlace);
-
-                string additionalInfo1 = sheet.get_Range("A8").Value2.ToString();
-                string additionalInfo2 = sheet.get_Range("A9").Value2.ToString();
-                PayloadGenerator.SwissQrCode.AdditionalInformation additionalInformation = new PayloadGenerator.SwissQrCode.AdditionalInformation(additionalInfo1, additionalInfo2);
-
-                PayloadGenerator.SwissQrCode.Reference reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.NON);
-
-                decimal amount = (decimal)sheet.get_Range("A17").Value2;
-                //PayloadGenerator.SwissQrCode.Currency currency = PayloadGenerator.SwissQrCode.Currency.CHF;
-                PayloadGenerator.SwissQrCode.Currency currency;
-                if (sheet.get_Range("A18").Value2 == "CHF")
+                try
                 {
-                    currency = PayloadGenerator.SwissQrCode.Currency.CHF;
-                }
-                else if (sheet.get_Range("A18").Value2 == "CHF")
-                {
-                    currency = PayloadGenerator.SwissQrCode.Currency.EUR;
-                }
-                else
-                {
-                    throw new Exception("Currency not supported: " + sheet.get_Range("A18").Value2);
-                }
+                    Microsoft.Office.Tools.Excel.Worksheet activesheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.ActiveSheet);
 
-                PayloadGenerator.SwissQrCode generator = new PayloadGenerator.SwissQrCode(iban, currency, contact, reference, additionalInformation, debitor, amount);
+                    string contactIBAN = sheet.get_Range("A2").Value2.ToString();
+                    PayloadGenerator.SwissQrCode.Iban iban = new PayloadGenerator.SwissQrCode.Iban(contactIBAN, PayloadGenerator.SwissQrCode.Iban.IbanType.Iban);
 
-                QRCodeGenerator qrGenerator = new QRCodeGenerator();
-                QRCodeData qrCodeData = qrGenerator.CreateQrCode(generator.ToString(), QRCodeGenerator.ECCLevel.M);
-                QRCode qrCode = new QRCode(qrCodeData);
-                Bitmap qrCodeAsBitmap = qrCode.GetGraphic(20, Color.Black, Color.White, Properties.Resources.CH_Kreuz_7mm, 14, 1);
+                    string contactName = sheet.get_Range("A3").Value2.ToString();
+                    string contactStreet = sheet.get_Range("A4").Value2.ToString();
+                    string contactPlace = sheet.get_Range("A5").Value2.ToString();
+                    string contactCountry = sheet.get_Range("A6").Value2.ToString();
+                    //PayloadGenerator.SwissQrCode.Contact contact = new PayloadGenerator.SwissQrCode.Contact(contactName, "CH", contactStreet, contactPlace);
+                    PayloadGenerator.SwissQrCode.Contact contact = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(contactName, contactCountry, contactStreet, contactPlace);
 
-                // Temporary qrcode bitmap
-                string picturePath = Path.GetTempPath() + "qrcode.bmp";
-                if (File.Exists(picturePath))
-                {
+                    string debitorName = sheet.get_Range("A12").Value2.ToString();
+                    string debitorStreet = sheet.get_Range("A13").Value2.ToString();
+                    string debitorPlace = sheet.get_Range("A14").Value2.ToString();
+                    string debitorCountry = sheet.get_Range("A15").Value2.ToString();
+                    //PayloadGenerator.SwissQrCode.Contact debitor = new PayloadGenerator.SwissQrCode.Contact(debitorName, "CH", debitorStreet, debitorPlace);
+                    PayloadGenerator.SwissQrCode.Contact debitor = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(debitorName, debitorCountry, debitorStreet, debitorPlace);
+
+                    string additionalInfo1 = sheet.get_Range("A8").Value2.ToString();
+                    string additionalInfo2 = sheet.get_Range("A9").Value2.ToString();
+                    PayloadGenerator.SwissQrCode.AdditionalInformation additionalInformation = new PayloadGenerator.SwissQrCode.AdditionalInformation(additionalInfo1, additionalInfo2);
+
+                    PayloadGenerator.SwissQrCode.Reference reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.NON);
+
+                    decimal amount = (decimal)sheet.get_Range("A17").Value2;
+                    //PayloadGenerator.SwissQrCode.Currency currency = PayloadGenerator.SwissQrCode.Currency.CHF;
+                    PayloadGenerator.SwissQrCode.Currency currency;
+                    if (sheet.get_Range("A18").Value2 == "CHF")
+                    {
+                        currency = PayloadGenerator.SwissQrCode.Currency.CHF;
+                    }
+                    else if (sheet.get_Range("A18").Value2 == "CHF")
+                    {
+                        currency = PayloadGenerator.SwissQrCode.Currency.EUR;
+                    }
+                    else
+                    {
+                        throw new Exception("Currency not supported: " + sheet.get_Range("A18").Value2);
+                    }
+
+                    PayloadGenerator.SwissQrCode generator = new PayloadGenerator.SwissQrCode(iban, currency, contact, reference, additionalInformation, debitor, amount);
+
+                    QRCodeGenerator qrGenerator = new QRCodeGenerator();
+                    QRCodeData qrCodeData = qrGenerator.CreateQrCode(generator.ToString(), QRCodeGenerator.ECCLevel.M);
+                    QRCode qrCode = new QRCode(qrCodeData);
+                    Bitmap qrCodeAsBitmap = qrCode.GetGraphic(20, Color.Black, Color.White, Properties.Resources.CH_Kreuz_7mm, 14, 1);
+
+                    // Temporary qrcode bitmap
+                    string picturePath = Path.GetTempPath() + "qrcode.bmp";
+                    if (File.Exists(picturePath))
+                    {
+                        File.Delete(picturePath);
+                    }
+                    qrCodeAsBitmap.Save(picturePath, ImageFormat.Bmp);
+
+                    // alternative qrcode bitmap
+                    string altpicturePath = sheet.get_Range("A26").Value2.ToString();
+                    if (File.Exists(altpicturePath))
+                    {
+                        File.Delete(altpicturePath);
+                    }
+                    qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
+
+                    //sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, 180, 40, 140, 140);
+                    float Left = readFloatValue(sheet.get_Range("B21").Value2);
+                    float Top = readFloatValue(sheet.get_Range("B22").Value2);
+                    float Width = readFloatValue(sheet.get_Range("B23").Value2);
+                    float Height = readFloatValue(sheet.get_Range("B24").Value2);
+                    if (Left > 0)
+                    {
+                        sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, Left, Top, Width, Height);
+                    }
+
+                    // Debug output
+                    if (bDebug == true)
+                    {
+                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
+                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+
+                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
+                        newdebugcell1.Value2 = "QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath + " at " + DateTime.Now.ToString();
+                        Microsoft.Office.Interop.Excel.Range newdebugcell2 = debug_sheet.get_Range("B20");
+                        newdebugcell2.Value2 = "Contact: " + contact.ToString();
+                        Microsoft.Office.Interop.Excel.Range newdebugcell3 = debug_sheet.get_Range("C20");
+                        newdebugcell3.Value2 = "Debitor: " + debitor.ToString();
+                        Microsoft.Office.Interop.Excel.Range newdebugcell4 = debug_sheet.get_Range("D20");
+                        newdebugcell4.Value2 = "Amount=" + amount.ToString() + " / Currency=" + currency.ToString();
+                        Microsoft.Office.Interop.Excel.Range newdebugcell5 = debug_sheet.get_Range("E20");
+                        newdebugcell5.Value2 = "Additional Information: UnstructureMessage=" + additionalInformation.UnstructureMessage + " / BillInformation=" + additionalInformation.BillInformation;
+                        Microsoft.Office.Interop.Excel.Range newdebugcell6 = debug_sheet.get_Range("F20");
+                        newdebugcell6.Value2 = "IBAN: " + iban.ToString();
+
+                        float debugLeft = readFloatValue(debug_sheet.get_Range("C5").Value2);
+                        float debugTop = readFloatValue(debug_sheet.get_Range("C6").Value2);
+                        float debugWidth = readFloatValue(debug_sheet.get_Range("C7").Value2);
+                        float debugHeight = readFloatValue(debug_sheet.get_Range("C8").Value2);
+                        if (debugLeft > 0)
+                        {
+                            debug_sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, debugLeft, debugTop, debugWidth, debugHeight);
+                        }
+                    }
+
+                    // Replace QR code bitmap in template
+                    string strQRTemplatePath = sheet.get_Range("A29").Value2.ToString();
+                    if (strFilePath.Equals(""))
+                    {
+                        if (sheet.get_Range("A31").Value2 != null)
+                        {
+                            strFilePath = sheet.get_Range("A31").Value2.ToString();
+                        }
+                    }
+                    generateDocument(strQRTemplatePath, strFilePath, picturePath);
+
+                    // delete temporary picture
                     File.Delete(picturePath);
                 }
-                qrCodeAsBitmap.Save(picturePath, ImageFormat.Bmp);
-
-                // alternative qrcode bitmap
-                string altpicturePath = sheet.get_Range("A26").Value2.ToString();
-                if (File.Exists(altpicturePath))
+                catch (Exception ex)
                 {
-                    File.Delete(altpicturePath);
-                }
-                qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
-
-                //sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, 180, 40, 140, 140);
-                float Left = ReadFloatValue(sheet.get_Range("B21").Value2);
-                float Top = ReadFloatValue(sheet.get_Range("B22").Value2);
-                float Width = ReadFloatValue(sheet.get_Range("B23").Value2);
-                float Height = ReadFloatValue(sheet.get_Range("B24").Value2);
-                if (Left > 0)
-                {
-                    sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, Left, Top, Width, Height);
-                }
-
-                // Debug output
-                if (bDebug == true)
-                {
-                    Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                    debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                    Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                    newdebugcell1.Value2 = "QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath + " at " + DateTime.Now.ToString();
-                    Microsoft.Office.Interop.Excel.Range newdebugcell2 = debug_sheet.get_Range("B20");
-                    newdebugcell2.Value2 = "Contact: " + contact.ToString();
-                    Microsoft.Office.Interop.Excel.Range newdebugcell3 = debug_sheet.get_Range("C20");
-                    newdebugcell3.Value2 = "Debitor: " + debitor.ToString();
-                    Microsoft.Office.Interop.Excel.Range newdebugcell4 = debug_sheet.get_Range("D20");
-                    newdebugcell4.Value2 = "Amount=" + amount.ToString() + " / Currency=" + currency.ToString();
-                    Microsoft.Office.Interop.Excel.Range newdebugcell5 = debug_sheet.get_Range("E20");
-                    newdebugcell5.Value2 = "Additional Information: UnstructureMessage=" + additionalInformation.UnstructureMessage + " / BillInformation=" + additionalInformation.BillInformation;
-                    Microsoft.Office.Interop.Excel.Range newdebugcell6 = debug_sheet.get_Range("F20");
-                    newdebugcell6.Value2 = "IBAN: " + iban.ToString();
-
-                    float debugLeft = ReadFloatValue(debug_sheet.get_Range("C5").Value2);
-                    float debugTop = ReadFloatValue(debug_sheet.get_Range("C6").Value2);
-                    float debugWidth = ReadFloatValue(debug_sheet.get_Range("C7").Value2);
-                    float debugHeight = ReadFloatValue(debug_sheet.get_Range("C8").Value2);
-                    if (debugLeft > 0)
+                    // Debug output
+                    if (bDebug == true)
                     {
-                        debug_sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, debugLeft, debugTop, debugWidth, debugHeight);
+                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
+                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
+
+                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
+                        newdebugcell1.Value2 = "generateQRCode: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                    }
+                    else
+                    {
+                        MessageBox.Show(ex.Message, "Swiss QR Code Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
-
-                // Replace QR code bitmap in template
-                string strQRTemplatePath = sheet.get_Range("A29").Value2.ToString();
-                if(strFilePath.Equals(""))
-                {
-                    if(sheet.get_Range("A31").Value2 != null)
-                    {
-                        strFilePath = sheet.get_Range("A31").Value2.ToString();
-                    }
-                }
-                generateDocument(strQRTemplatePath, strFilePath, picturePath);
-
-                // delete temporary picture
-                File.Delete(picturePath);
-            }
-            catch (Exception ex)
-            {
-                // Debug output
-                if (bDebug == true)
-                {
-                    Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                    debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                    Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                    newdebugcell1.Value2 = "generateQRCode: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
-                }
-                else
-                {
-                    MessageBox.Show(ex.Message, "Swiss QR Code Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-        }
-
-        private static float ReadFloatValue(dynamic value2)
-        {
-            if (value2 != null)
-            {
-                return (float)value2;
-            }
-            else
-            {
-                return 0;
             }
         }
 
@@ -251,126 +239,120 @@ namespace fotoleuToolbox
                 // Disable debugging; ignore exception
             }
 
-            try
+            Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
+            if (sheet != null)
             {
-                Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
-                string pathTemplate = sheet.get_Range("G9").Value2.ToString();
-
-                string strFileTarget = "C:\\Users\\imfeldc\\source\\repos\\SwissQRCodeExcel4\\NewDoc.docx";
-                string strFile1 = "C:\\Users\\imfeldc\\source\\repos\\SwissQRCodeExcel4\\doc3.docx";
-                string strFile2 = "C:\\Users\\imfeldc\\source\\repos\\SwissQRCodeExcel4\\doc4.docx";
-
-                generateBill(strFile1);
-                generateQRCode(strFile2);
-
-                Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
-
-                // Open empty document
-                //Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Open(strFileTarget);
-                Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Add();
-                wordDocTarget.Activate();
-
-                /*
-                Microsoft.Office.Interop.Word.Range rng1 = wordApp.ActiveDocument.Range();
-                rng1.Collapse(WdCollapseDirection.wdCollapseEnd);
-                rng1.InsertFile(strFile1);
-                //rng1.InsertBreak(WdBreakType.wdSectionBreakNextPage);
-                rng1 = null;
-
-                Microsoft.Office.Interop.Word.Range rng2 = wordApp.ActiveDocument.Range();
-                rng2.Collapse(WdCollapseDirection.wdCollapseEnd);
-                rng2.InsertFile(strFile2);
-                rng2.InsertBreak(WdBreakType.wdSectionBreakNextPage);
-                rng2 = null;
-                */
-
-                
-                // Open first file and insert them
-                Microsoft.Office.Interop.Word.Document wordDoc1 = wordApp.Documents.Open(strFile1, ReadOnly: true);
-                wordDoc1.Fields.Update();
-                wordDoc1.Activate();
-                //wordApp.Selection.ClearFormatting();
-                wordApp.Selection.WholeStory();
-                wordApp.Selection.Copy();
-                wordDocTarget.Activate();
-                wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
-                wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
-                wordDoc1.Close(SaveChanges: false);
-                wordDoc1 = null;
-
-                // Open second file and insert them
-                Microsoft.Office.Interop.Word.Document wordDoc2 = wordApp.Documents.Open(strFile2, ReadOnly: true);
-                wordDoc2.Fields.Update();
-                wordDoc2.Activate();
-                //wordApp.Selection.ClearFormatting();
-                wordApp.Selection.WholeStory();
-                wordApp.Selection.Copy();
-                wordDocTarget.Activate();
-                wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
-                //wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
-                wordDoc2.Close(SaveChanges: false);
-                wordDoc2 = null;
-                
-
-
-                foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
+                try
                 {
-                    string strsection = "Section:" 
-                        + " Index=" + section.Index 
-                        + " Headers.Count=" + section.Headers.Count
-                        + " Foorters.Count" + section.Footers.Count
-                        + " =>"+ section.ToString();
-                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].LinkToPrevious = false;
-                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].LinkToPrevious = false;
-                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].LinkToPrevious = false;
+                    string pathTemplate = sheet.get_Range("G9").Value2.ToString();
+
+                    string strFileName = readBookmarkValue(sheet, "Filename");
+                    string strFilePath = readBookmarkValue(sheet, "Filepath");
+                    string strFileTarget = strFilePath + strFileName; ;
+
+                    string strAuftragID = readBookmarkValue(sheet, "AuftragID");
+                    string strGUID = Guid.NewGuid().ToString();
+                    // Temporary 1st word document
+                    string strFile1 = Path.GetTempPath() + "1stDoc_" + strAuftragID + "_" + strGUID + ".docx";
+                    if (File.Exists(strFile1))
+                    {
+                        File.Delete(strFile1);
+                    }
+                    // Temporary 2nd word document
+                    string strFile2 = Path.GetTempPath() + "2ndDoc_" + strAuftragID + "_" + strGUID + ".docx";
+                    if (File.Exists(strFile2))
+                    {
+                        File.Delete(strFile2);
+                    }
+
+                    generateBill(strFile1);     // generate billing information (w/o QR code)
+                    generateQRCode(strFile2);   // generate QR code document
+
+                    Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
+
+                    // Open empty document
+                    //Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Open(strFileTarget);
+                    Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Add();
+                    wordDocTarget.Activate();
+
+                    // Open first file and insert them
+                    Microsoft.Office.Interop.Word.Document wordDoc1 = wordApp.Documents.Open(strFile1, ReadOnly: true);
+                    wordDoc1.Fields.Update();
+                    wordDoc1.Activate();
+                    wordApp.Selection.WholeStory();
+                    wordApp.Selection.Copy();
+                    wordDocTarget.Activate();
+                    wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
+                    wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
+                    wordDoc1.Close(SaveChanges: false);
+                    wordDoc1 = null;
+
+                    // Open second file and insert them
+                    Microsoft.Office.Interop.Word.Document wordDoc2 = wordApp.Documents.Open(strFile2, ReadOnly: true);
+                    wordDoc2.Fields.Update();
+                    wordDoc2.Activate();
+                    wordApp.Selection.WholeStory();
+                    wordApp.Selection.Copy();
+                    wordDocTarget.Activate();
+                    wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
+                    //wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
+                    wordDoc2.Close(SaveChanges: false);
+                    wordDoc2 = null;
+                    wordApp.Selection.ClearFormatting();    // avoid word asking to keep clipboard when closing
+                    wordApp.Selection.Find.ClearFormatting();
+                    wordApp.Selection.Find.Replacement.ClearFormatting();
+
+                    foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
+                    {
+                        // Do not link headers & footers with previous section
+                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].LinkToPrevious = false;
+                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].LinkToPrevious = false;
+                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].LinkToPrevious = false;
+                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterPrimary].LinkToPrevious = false;
+                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].LinkToPrevious = false;
+                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].LinkToPrevious = false;
+                    }
+
+                    if (wordDocTarget.Sections.Count == 2)
+                    {
+                        // delete in 2nd section the header and footer
+                        // NOTE: I had to use index 2; even I'm used to provide 0-based indexes. Not sure, but it works :-)
+                        Section section = wordDocTarget.Sections[2];
+                        //section.PageSetup.DifferentFirstPageHeaderFooter = -1; //=true (see also WdConstants.wdUndefined);
+                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
+                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
+                        section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
+                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
+                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
+                        section.Footers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
+                    }
+
+                    wordApp.Visible = true;
+                    wordApp.Activate();
+                    wordDocTarget.SaveAs2(strFileTarget);
+                    wordDocTarget = null;
+
+                    wordApp = null;
+
                 }
-
-                if (wordDocTarget.Sections.Count == 2)
+                catch (Exception ex)
                 {
-                    // delete in 2nd section the header and footer
-                    Section section = wordDocTarget.Sections[2];
-                    //section.PageSetup.DifferentFirstPageHeaderFooter = -1; //=true (see also WdConstants.wdUndefined);
-                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterPrimary].Range.Delete();
-                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
-                    section.Headers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
-                }
+                    // Debug output
+                    if (bDebug == true)
+                    {
+                        Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
+                        debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
 
-                foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
-                {
-                    string strsection = "Section:"
-                        + " Index=" + section.Index
-                        + " Headers.Count=" + section.Headers.Count
-                        + " Foorters.Count" + section.Footers.Count
-                        + " =>" + section.ToString();
-                }
-
-
-                wordApp.Visible = true;
-                wordApp.Activate();
-                wordDocTarget.SaveAs2(strFileTarget);
-                wordDocTarget = null;
-
-                wordApp = null;
-
-            }
-            catch (Exception ex)
-            {
-                // Debug output
-                if (bDebug == true)
-                {
-                    Microsoft.Office.Interop.Excel.Range debugrows = debug_sheet.get_Range("A20");
-                    debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
-
-                    Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
-                    newdebugcell1.Value2 = "generateDocument: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
-                }
-                else
-                {
-                    MessageBox.Show(ex.Message, "Document Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Microsoft.Office.Interop.Excel.Range newdebugcell1 = debug_sheet.get_Range("A20");
+                        newdebugcell1.Value2 = "generateDocument: Exception=" + ex.Message + " at " + DateTime.Now.ToString();
+                    }
+                    else
+                    {
+                        MessageBox.Show(ex.Message, "Document Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 }
             }
         }
-
 
         private static void generateDocument(string pathTemplate, string pathFilename, string picturePath)
         {
@@ -574,6 +556,68 @@ namespace fotoleuToolbox
                     newdebugcell1.Value2 = "generateDocument: Document '" + pathTemplate + "' doesn't exists; at " + DateTime.Now.ToString();
                 }
             }
+        }
+
+        private static Microsoft.Office.Tools.Excel.Worksheet openFotoleuToolboxSheet( string strFotoleuSheetName)
+        {
+            Microsoft.Office.Tools.Excel.Worksheet sheet=null;
+
+            try
+            {
+                sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets[strFotoleuSheetName]);
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Please open a valid fotoleu excel workbook, which contains sheet '" + strFotoleuSheetName +"'", "fotoleu Toolbox", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+
+            return sheet;
+        }
+
+        private static float readFloatValue(dynamic value2)
+        {
+            if (value2 != null)
+            {
+                return (float)value2;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+
+        private static string readBookmarkValue(Microsoft.Office.Tools.Excel.Worksheet sheet, string strSearchBookmarkName)
+        {
+            string strBookmarkValueFound = "";
+
+            // Replace "bookmarks" within word document with real values from excel sheet
+            int bookmarkCounter = 0;
+            foreach (Microsoft.Office.Interop.Excel.ListObject table in sheet.ListObjects)
+            {
+                // The table "TabABBookmarks" contains three columns:
+                // 1st column: BookmarkName         -> name of the bookmark
+                // 2nd column: BookmarkValue        -> value which shall be insterted in final document
+                // 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
+                if (table.Name == "TabABBookmarks")
+                {
+                    Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
+
+                    // Loop through rows ...
+                    foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
+                    {
+                        // Get bookmark value (1. column)
+                        string strBookmarkName = row.Cells[1, 1].Value2.ToString();
+                        if (strBookmarkName.Equals(strSearchBookmarkName))
+                        {
+                            bookmarkCounter++;
+                            // Get filename (from 2. column) to be used to save this document
+                            strBookmarkValueFound = row.Cells[1, 2].Value2.ToString();
+                            return strBookmarkValueFound;
+                        }
+                    }
+                }
+            }
+            return strBookmarkValueFound;
         }
     }
 }

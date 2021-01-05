@@ -75,7 +75,7 @@ namespace fotoleuToolbox.Properties {
         /// </summary>
         internal static System.Drawing.Bitmap edit_document {
             get {
-                object obj = ResourceManager.GetObject("edit-document", resourceCulture);
+                object obj = ResourceManager.GetObject("edit_document", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -85,7 +85,7 @@ namespace fotoleuToolbox.Properties {
         /// </summary>
         internal static System.Drawing.Bitmap multiple_files {
             get {
-                object obj = ResourceManager.GetObject("multiple-files", resourceCulture);
+                object obj = ResourceManager.GetObject("multiple_files", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
@@ -95,7 +95,7 @@ namespace fotoleuToolbox.Properties {
         /// </summary>
         internal static System.Drawing.Bitmap QRCode {
             get {
-                object obj = ResourceManager.GetObject("QRCode", resourceCulture);
+                object obj = ResourceManager.GetObject("qrcode", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
