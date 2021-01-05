@@ -117,7 +117,15 @@ namespace fotoleuToolbox
                     {
                         File.Delete(altpicturePath);
                     }
-                    qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
+                    try
+                    {   // save bitmap on alternative path
+                        qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
+                    }
+                    catch
+                    {
+                        // catch expception, e.g. in case filepath is not valid/accesible
+                        printDebugMessage("generateQRCode: Cannot save QR code bitmap to alternative path! altpicturePath=" + altpicturePath);
+                    }
 
                     //sheet.Shapes.AddPicture(picturePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, 180, 40, 140, 140);
                     float Left = readFloatValue(sheet.get_Range("B21").Value2);
@@ -168,6 +176,7 @@ namespace fotoleuToolbox
         public static void generateDocument()
         {
             Boolean bDebug = openDebugSheet();
+            string strAddDebugInfo = "";
 
             Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
             if (sheet != null)
@@ -197,25 +206,34 @@ namespace fotoleuToolbox
 
                     generateBill(strFile1);     // generate billing information (w/o QR code)
                     generateQRCode(strFile2);   // generate QR code document
+                    printDebugMessage("generateDocument: The two single files have been created! File1=" + strFile1 + ", File2=" + strFile2);
 
                     Microsoft.Office.Interop.Word.Application wordApp = new Microsoft.Office.Interop.Word.Application();
-
-                    // Open empty document
-                    //Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Open(strFileTarget);
-                    Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Add();
-                    wordDocTarget.Activate();
+                    strAddDebugInfo = "Word Application created!";
 
                     // Open first file and insert them
                     Microsoft.Office.Interop.Word.Document wordDoc1 = wordApp.Documents.Open(strFile1, ReadOnly: true);
                     wordDoc1.Fields.Update();
+                    strAddDebugInfo = "Doc1 fields updated!";
                     wordDoc1.Activate();
+                    strAddDebugInfo = "Doc1 activated!";
                     wordApp.Selection.WholeStory();
+                    strAddDebugInfo = "Select 'WholeStory'!";
                     wordApp.Selection.Copy();
+                    strAddDebugInfo = "Selection copied!";
+                    // Open empty document
+                    //Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Open(strFileTarget);
+                    Microsoft.Office.Interop.Word.Document wordDocTarget = wordApp.Documents.Add();
                     wordDocTarget.Activate();
+                    strAddDebugInfo = "Target document activated (first time)!";
                     wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
+                    strAddDebugInfo = "clipboard into target document pasted!";
                     wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
+                    strAddDebugInfo = "Section break inserted into target document!";
                     wordDoc1.Close(SaveChanges: false);
+                    strAddDebugInfo = "Doc1 document closed!";
                     wordDoc1 = null;
+                    strAddDebugInfo = "First Document into traget document copied!";
 
                     // Open second file and insert them
                     Microsoft.Office.Interop.Word.Document wordDoc2 = wordApp.Documents.Open(strFile2, ReadOnly: true);
@@ -224,10 +242,14 @@ namespace fotoleuToolbox
                     wordApp.Selection.WholeStory();
                     wordApp.Selection.Copy();
                     wordDocTarget.Activate();
+                    strAddDebugInfo = "Target document activated (second time)!";
                     wordApp.Selection.PasteAndFormat(WdRecoveryType.wdFormatOriginalFormatting);
                     //wordApp.Selection.InsertBreak(WdBreakType.wdSectionBreakNextPage);
                     wordDoc2.Close(SaveChanges: false);
                     wordDoc2 = null;
+                    strAddDebugInfo = "First Document into traget document copied!";
+
+                    printDebugMessage("generateDocument: Target file has been created! Number of words=" + wordDocTarget.Words.Count);
 
                     #region Empty clipbord
                     // avoid word asking to keep clipboard when closing
@@ -267,8 +289,9 @@ namespace fotoleuToolbox
                     wordApp.Visible = true;
                     wordApp.Activate();
                     wordDocTarget.SaveAs2(strFileTarget);
-                    wordDocTarget = null;
+                    printDebugMessage("generateDocument: Target file has been saved! strFileTarget=" + strFileTarget);
 
+                    wordDocTarget = null;
                     wordApp = null;
 
                 }
@@ -277,7 +300,7 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        printDebugMessage("generateDocument: Exception=" + ex.Message);
+                        printDebugMessage("generateDocument: Exception=" + ex.Message + ", strAddDebugInfo=" + strAddDebugInfo);
                     }
                     else
                     {
