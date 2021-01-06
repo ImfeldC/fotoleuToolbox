@@ -15,6 +15,7 @@ namespace fotoleuToolbox
 	{
         private static string s_toolboxVersion = "";
         private static Microsoft.Office.Tools.Excel.Worksheet s_debug_sheet = null;
+        private static Boolean s_bDebug = false;
 
         public fotoleuToolbox()
 		{
@@ -32,7 +33,7 @@ namespace fotoleuToolbox
                 {
                     string pathTemplate = sheet.get_Range("G9").Value2.ToString();
 
-                    generateDocument(pathTemplate, strFilePath, "", "AB");
+                    generateDocument(pathTemplate, strFilePath, "", false, "AB");
                 }
                 catch (Exception ex)
                 {
@@ -177,7 +178,7 @@ namespace fotoleuToolbox
                                 strFilePath = sheet.get_Range("A31").Value2.ToString();
                             }
                         }
-                        generateDocument(strQRTemplatePath, strFilePath, picturePath, "ORESZ");
+                        generateDocument(strQRTemplatePath, strFilePath, picturePath, false, "ORESZ");
 
                         // delete temporary picture
                         File.Delete(picturePath);
@@ -399,7 +400,16 @@ namespace fotoleuToolbox
             }
         }
 
-        private static void generateDocument(string pathTemplate, string pathFilename, string picturePath, string strFileNameSuffix)
+        /// <summary>
+        /// Private method to generate document.
+        /// Replaces the bookmarks in the file template with real values read from excel sheet.
+        /// </summary>
+        /// <param name="pathTemplate">Name and path of the template.</param>
+        /// <param name="pathFilename">Name and path of the target document.</param>
+        /// <param name="picturePath">Name and path of the QR code bitmap to be used in target document.</param>
+        /// <param name="bSaveDocument">Create a copy of target docment, using filename and filepath read from excel sheet.</param>
+        /// <param name="strFileNameSuffix">Suffix to be added to filename read from excel sheet.</param>
+        private static void generateDocument(string pathTemplate, string pathFilename, string picturePath, bool bSaveDocument, string strFileNameSuffix)
         {
             Boolean bDebug = openDebugSheet();
 
@@ -412,6 +422,7 @@ namespace fotoleuToolbox
                     wordApp = new Microsoft.Office.Interop.Word.Application();
                     Microsoft.Office.Interop.Word.Document wordDoc = wordApp.Documents.Open(pathTemplate, ReadOnly: true);
 
+                    #region Replace "bookmarks" within word document with real values from excel sheet
                     // Replace "bookmarks" within word document with real values from excel sheet
                     int replaceCounter = 0;
                     foreach (Microsoft.Office.Interop.Excel.ListObject table in sheet.ListObjects)
@@ -465,9 +476,11 @@ namespace fotoleuToolbox
                             }
                         }
                     }
+                    #endregion
 
+                    #region replace QR code bitmap with real bitmap
                     // replace QR code bitmap with real bitmap
-                    if(!picturePath.Equals(""))
+                    if (!picturePath.Equals(""))
                     {
 
                         // Replace QR image in shapes
@@ -509,29 +522,36 @@ namespace fotoleuToolbox
                             }
                         }
                     }
+                    #endregion
 
                     wordDoc.Fields.Update();
                     wordDoc.Activate();
 
-                    // save document
-                    string strFileName = readBookmarkValue(sheet, "Filename");
-                    if (!strFileName.Equals(""))
+                    #region save document with filename and path read from excel sheet
+                    // save document with filename and path read from excel sheet
+                    if (bSaveDocument)
                     {
-                        string strFilePath = readBookmarkValue(sheet, "Filepath");
-                        if (Directory.Exists(strFilePath))
+                        string strFileName = readBookmarkValue(sheet, "Filename");
+                        if (!strFileName.Equals(""))
                         {
-                            // add suffix - if available - to the filename
-                            if( !strFileNameSuffix.Equals(""))
+                            string strFilePath = readBookmarkValue(sheet, "Filepath");
+                            if (Directory.Exists(strFilePath))
                             {
-                                strFileName = strFileName.Replace(".docx", "_" + strFileNameSuffix + ".docx");
+                                // add suffix - if available - to the filename
+                                if (!strFileNameSuffix.Equals(""))
+                                {
+                                    strFileName = strFileName.Replace(".docx", "_" + strFileNameSuffix + ".docx");
+                                }
+                                wordDoc.SaveAs2(strFilePath + strFileName);
+                                printDebugMessage("generateDocument: Document saved! strFileName=" + strFileName + ", strFilePath=" + strFilePath);
                             }
-                            wordDoc.SaveAs2(strFilePath + strFileName);
-                        }
-                        else
-                        {
-                            printDebugMessage("generateDocument: Path doesn't exists, cannot save file! strFilePath=" + strFilePath + ", strFileName=" + strFileName);
+                            else
+                            {
+                                printDebugMessage("generateDocument: Path doesn't exists, cannot save file! strFileName=" + strFileName + ", strFilePath=" + strFilePath);
+                            }
                         }
                     }
+                    #endregion
 
                     // save file OR show word app
                     if (!pathFilename.Equals(""))
@@ -550,11 +570,7 @@ namespace fotoleuToolbox
                     wordDoc = null;
                     wordApp = null;
 
-                    // Debug output
-                    if (bDebug == true)
-                    {
-                        printDebugMessage("generateDocument: Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Template=" + pathTemplate + ", Filepath=" + pathFilename);
-                    }
+                    printDebugMessage("generateDocument: Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Template=" + pathTemplate + ", Filepath=" + pathFilename);
                 }
                 catch (Exception ex)
                 {
@@ -576,11 +592,7 @@ namespace fotoleuToolbox
             }
             else
             {
-                // Debug output
-                if (bDebug == true)
-                {
-                    printDebugMessage("generateDocument: Document '" + pathTemplate + "' doesn't exists");
-                }
+                printDebugMessage("generateDocument: Document '" + pathTemplate + "' doesn't exists");
             }
         }
 
@@ -655,34 +667,34 @@ namespace fotoleuToolbox
 
         private static bool openDebugSheet()
         {
-            Boolean bDebug = false;
             try
             {
                 if(s_debug_sheet == null)
                 {
                     s_debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
-                    if (s_debug_sheet.get_Range("D2").Value2 == "ON")
-                    {
-                        bDebug = true;
-                    }
+                }
+                if (s_debug_sheet.get_Range("D2").Value2 == "ON")
+                {
+                    s_bDebug = true;
                 }
                 else
                 {
-                    // debug sheet has already been opened
-                    bDebug = true;
+                    s_bDebug = false;
                 }
             }
             catch (Exception)
             {
                 // Disable debugging; ignore exception
+                s_debug_sheet = null;
+                s_bDebug = false;
             }
-            return bDebug;
+            return s_bDebug;
         }
 
         private static void printDebugMessage(string strDebugMessage)
         {
             // Debug output
-            if (s_debug_sheet != null)
+            if ((s_debug_sheet != null) && s_bDebug)
             {
                 Microsoft.Office.Interop.Excel.Range debugrows = s_debug_sheet.get_Range("A20");
                 debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
@@ -694,6 +706,7 @@ namespace fotoleuToolbox
                 newdebugcell.Value2 = strDebugMessage;
             }
 
+            /* doesn't work :-(
             try
             {
                 Microsoft.Office.Interop.Excel.Application excelApp = new Microsoft.Office.Interop.Excel.Application();
@@ -705,12 +718,13 @@ namespace fotoleuToolbox
                 // Ignore any exception
                 string strStatusBar = "Debug Message: " + strDebugMessage;
             }
+            */
         }
 
         private static void printDebugMessage(string strDebugMessage, string strContact, string strDebitor, string strAmount, string strCurrency, string strUnstructuredMessage, string strBillInfo, string strIBAN)
         {
             // Debug output
-            if (s_debug_sheet != null)
+            if ((s_debug_sheet != null) && s_bDebug)
             {
                 Microsoft.Office.Interop.Excel.Range debugrows = s_debug_sheet.get_Range("A20");
                 debugrows.EntireRow.Insert(XlInsertShiftDirection.xlShiftDown); // sift down whole row
@@ -736,7 +750,7 @@ namespace fotoleuToolbox
         private static void printDebugImage(string strDebugImagePath)
         {
             // Debug output
-            if (s_debug_sheet != null)
+            if ((s_debug_sheet != null) && s_bDebug)
             {
                 float debugLeft = readFloatValue(s_debug_sheet.get_Range("D5").Value2);
                 float debugTop = readFloatValue(s_debug_sheet.get_Range("D6").Value2);
