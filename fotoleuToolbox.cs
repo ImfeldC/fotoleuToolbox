@@ -8,6 +8,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
 using System.Deployment.Application;
+using static QRCoder.PayloadGenerator.SwissQrCode.Reference;
 
 namespace fotoleuToolbox
 {
@@ -83,7 +84,16 @@ namespace fotoleuToolbox
                     string additionalInfo2 = sheet.get_Range("A9").Value2.ToString();
                     PayloadGenerator.SwissQrCode.AdditionalInformation additionalInformation = new PayloadGenerator.SwissQrCode.AdditionalInformation(additionalInfo1, additionalInfo2);
 
-                    PayloadGenerator.SwissQrCode.Reference reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.NON);
+                    PayloadGenerator.SwissQrCode.Reference reference;
+                    if((sheet.get_Range("A10").Value2 != null) && !sheet.get_Range("A10").Value2.ToString().Equals(""))
+                    {
+                        string strReference = sheet.get_Range("A10").Value2.ToString();
+                        reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.SCOR, strReference, ReferenceTextType.CreditorReferenceIso11649);
+                    }
+                    else
+                    {
+                        reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.NON);
+                    }
 
                     string strAmount = sheet.get_Range("A17").Value2.ToString();
                     decimal amount = -1;
