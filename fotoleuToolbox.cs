@@ -63,6 +63,7 @@ namespace fotoleuToolbox
             string strVersion = readQRCodeValue("Version");
             if (!strVersion.Equals(""))
             {
+                printDebugMessage("generateQRCode: Start generating QR codes ... (strVersion=" + strVersion + ")");
                 try
                 {
                     #region Read Values from table and create objects
@@ -70,11 +71,13 @@ namespace fotoleuToolbox
 
                     string contactIBAN = readQRCodeValue("IBAN");
                     PayloadGenerator.SwissQrCode.Iban iban = new PayloadGenerator.SwissQrCode.Iban(contactIBAN, PayloadGenerator.SwissQrCode.Iban.IbanType.Iban);
+                    printDebugMessage("generateQRCode: Value read from table! contactIBAN=" + contactIBAN);
 
                     string contactName = readQRCodeValue("ContactName");
                     string contactStreet = readQRCodeValue("ContactAdressLine1");
                     string contactPlace = readQRCodeValue("ContactAdressLine2");
                     string contactCountry = readQRCodeValue("ContactCountry");
+                    printDebugMessage("generateQRCode: Contact Values read from table! contactName=" + contactName);
                     //PayloadGenerator.SwissQrCode.Contact contact = new PayloadGenerator.SwissQrCode.Contact(contactName, "CH", contactStreet, contactPlace);
                     PayloadGenerator.SwissQrCode.Contact contact = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(contactName, contactCountry, contactStreet, contactPlace);
 
@@ -82,6 +85,7 @@ namespace fotoleuToolbox
                     string debitorStreet = readQRCodeValue("DebitorAdressLine1");
                     string debitorPlace = readQRCodeValue("DebitorAdressLine2");
                     string debitorCountry = readQRCodeValue("DebitorCountry");
+                    printDebugMessage("generateQRCode: Debitor Values read from table! debitorName=" + debitorName);
                     //PayloadGenerator.SwissQrCode.Contact debitor = new PayloadGenerator.SwissQrCode.Contact(debitorName, "CH", debitorStreet, debitorPlace);
                     PayloadGenerator.SwissQrCode.Contact debitor = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(debitorName, debitorCountry, debitorStreet, debitorPlace);
 
@@ -99,6 +103,7 @@ namespace fotoleuToolbox
                     {
                         reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.NON);
                     }
+                    printDebugMessage("generateQRCode: Values read from table! strReference=" + strReference);
                     #endregion
 
                     string strAmount = readQRCodeValue("Amount");
@@ -149,6 +154,7 @@ namespace fotoleuToolbox
                             File.Delete(picturePath);
                         }
                         qrCodeAsBitmap.Save(picturePath, ImageFormat.Bmp);
+                        printDebugMessage("generateQRCode: QR code bitmap saved! picturePath=" + picturePath);
                         #endregion
 
                         #region Save QR code bitmap to an addtional (atlernative) file
@@ -167,6 +173,7 @@ namespace fotoleuToolbox
                             // catch expception, e.g. in case filepath is not valid/accesible
                             printDebugMessage("generateQRCode: Cannot save QR code bitmap to alternative path! altpicturePath=" + altpicturePath);
                         }
+                        printDebugMessage("generateQRCode: Alternative QR code bitmap saved! altpicturePath=" + altpicturePath);
                         #endregion
 
                         // Debug output
@@ -667,18 +674,21 @@ namespace fotoleuToolbox
                         foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
                         {
                             // Get attribute name (1. column)
-                            string strName = row.Cells[1, 1].Value2.ToString();
-                            if (strName.Equals(strValueName))
+                            if(row.Cells[1, 1].Value2 != null)
                             {
-                                // Get attribute value (from 2. column) to be used to save this document
-                                if(row.Cells[1, 2].Value2 != null)
+                                string strName = row.Cells[1, 1].Value2.ToString();
+                                if (strName.Equals(strValueName))
                                 {
-                                    strValueFound = row.Cells[1, 2].Value2.ToString();
-                                    return strValueFound;
-                                }
-                                else
-                                {
-                                    return "";
+                                    // Get attribute value (from 2. column) to be used to save this document
+                                    if (row.Cells[1, 2].Value2 != null)
+                                    {
+                                        strValueFound = row.Cells[1, 2].Value2.ToString();
+                                        return strValueFound;
+                                    }
+                                    else
+                                    {
+                                        return "";
+                                    }
                                 }
                             }
                         }
