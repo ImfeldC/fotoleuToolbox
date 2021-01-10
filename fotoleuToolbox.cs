@@ -51,7 +51,11 @@ namespace fotoleuToolbox
             }
         }
 
-        public static void generateQRCode(string strFilePath)
+        /// <summary>
+        /// Generates QR bitmap code, replaces them in the template and stores the newly generated file under the name passed by strFilePath.
+        /// </summary>
+        /// <param name="strFilePath">Target filename for newly created document.</param>
+        public static void generateQRCodeV1(string strFilePath)
         {
             Boolean bDebug = openDebugSheet();
             printDebugMessage("generateQRCode: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
@@ -209,6 +213,163 @@ namespace fotoleuToolbox
             }
         }
 
+        /// <summary>
+        /// Generates QR bitmap code, replaces them in the template and stores the newly generated file under the name passed by strFilePath.
+        /// </summary>
+        /// <param name="strFilePath">Target filename for newly created document.</param>
+        public static void generateQRCodeV2(string strFilePath)
+        {
+            Boolean bDebug = openDebugSheet();
+            printDebugMessage("generateQRCode: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
+
+            string strVersion = readQRCodeValue("Version");
+            if (!strVersion.Equals(""))
+            {
+                try
+                {
+                    #region Read Values from table and create objects
+                    Microsoft.Office.Tools.Excel.Worksheet activesheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.ActiveSheet);
+
+                    string contactIBAN = readQRCodeValue("IBAN");
+                    PayloadGenerator.SwissQrCode.Iban iban = new PayloadGenerator.SwissQrCode.Iban(contactIBAN, PayloadGenerator.SwissQrCode.Iban.IbanType.Iban);
+
+                    string contactName = readQRCodeValue("ContactName");
+                    string contactStreet = readQRCodeValue("ContactAdressLine1");
+                    string contactPlace = readQRCodeValue("ContactAdressLine2");
+                    string contactCountry = readQRCodeValue("ContactCountry");
+                    //PayloadGenerator.SwissQrCode.Contact contact = new PayloadGenerator.SwissQrCode.Contact(contactName, "CH", contactStreet, contactPlace);
+                    PayloadGenerator.SwissQrCode.Contact contact = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(contactName, contactCountry, contactStreet, contactPlace);
+
+                    string debitorName = readQRCodeValue("DebitorName");
+                    string debitorStreet = readQRCodeValue("DebitorAdressLine1");
+                    string debitorPlace = readQRCodeValue("DebitorAdressLine2");
+                    string debitorCountry = readQRCodeValue("DebitorCountry");
+                    //PayloadGenerator.SwissQrCode.Contact debitor = new PayloadGenerator.SwissQrCode.Contact(debitorName, "CH", debitorStreet, debitorPlace);
+                    PayloadGenerator.SwissQrCode.Contact debitor = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(debitorName, debitorCountry, debitorStreet, debitorPlace);
+
+                    string additionalInfo1 = readQRCodeValue("UnstructureMessage");
+                    string additionalInfo2 = readQRCodeValue("BillInformation");
+                    PayloadGenerator.SwissQrCode.AdditionalInformation additionalInformation = new PayloadGenerator.SwissQrCode.AdditionalInformation(additionalInfo1, additionalInfo2);
+
+                    PayloadGenerator.SwissQrCode.Reference reference;
+                    string strReference = readQRCodeValue("SCOR");
+                    if (!strReference.Equals(""))
+                    {
+                        reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.SCOR, strReference, ReferenceTextType.CreditorReferenceIso11649);
+                    }
+                    else
+                    {
+                        reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.NON);
+                    }
+                    #endregion
+
+                    string strAmount = readQRCodeValue("Amount");
+                    decimal amount = -1;
+                    try
+                    {
+                        amount = decimal.Parse(strAmount);
+                    }
+                    catch
+                    {
+                        // value cannot be converted in a "valid" decimal --> skip QR code production
+                        printDebugMessage("generateQRCode: Amount value cannot be converted in a 'valid' decimal --> skip QR code production! strAmount=" + strAmount);
+                        amount = -1;
+                    }
+                    if (amount >= 0)
+                    {
+                        #region Retrieve Currency
+                        //PayloadGenerator.SwissQrCode.Currency currency = PayloadGenerator.SwissQrCode.Currency.CHF;
+                        string strCurrency = readQRCodeValue("Currency");
+                        PayloadGenerator.SwissQrCode.Currency currency;
+                        if (strCurrency.Equals("CHF"))
+                        {
+                            currency = PayloadGenerator.SwissQrCode.Currency.CHF;
+                        }
+                        else if (strCurrency.Equals("EUR"))
+                        {
+                            currency = PayloadGenerator.SwissQrCode.Currency.EUR;
+                        }
+                        else
+                        {
+                            throw new Exception("Currency not supported: strCurrency=" + strCurrency);
+                        }
+                        #endregion
+
+                        // Create QR Code
+                        PayloadGenerator.SwissQrCode generator = new PayloadGenerator.SwissQrCode(iban, currency, contact, reference, additionalInformation, debitor, amount);
+
+                        QRCodeGenerator qrGenerator = new QRCodeGenerator();
+                        QRCodeData qrCodeData = qrGenerator.CreateQrCode(generator.ToString(), QRCodeGenerator.ECCLevel.M);
+                        QRCode qrCode = new QRCode(qrCodeData);
+                        Bitmap qrCodeAsBitmap = qrCode.GetGraphic(20, Color.Black, Color.White, Properties.Resources.CH_Kreuz_7mm, 14, 1);
+
+                        #region Save QR code bitmap, to be used in further processing
+                        // Temporary qrcode bitmap
+                        string picturePath = Path.GetTempPath() + "qrcode.bmp";
+                        if (File.Exists(picturePath))
+                        {
+                            File.Delete(picturePath);
+                        }
+                        qrCodeAsBitmap.Save(picturePath, ImageFormat.Bmp);
+                        #endregion
+
+                        #region Save QR code bitmap to an addtional (atlernative) file
+                        // alternative qrcode bitmap
+                        string altpicturePath = readQRCodeValue("BitmapPath");
+                        if (File.Exists(altpicturePath))
+                        {
+                            File.Delete(altpicturePath);
+                        }
+                        try
+                        {   // save bitmap on alternative path
+                            qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
+                        }
+                        catch
+                        {
+                            // catch expception, e.g. in case filepath is not valid/accesible
+                            printDebugMessage("generateQRCode: Cannot save QR code bitmap to alternative path! altpicturePath=" + altpicturePath);
+                        }
+                        #endregion
+
+                        // Debug output
+                        if (bDebug == true)
+                        {
+                            printDebugMessage("QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath, contact.ToString(), debitor.ToString(), amount.ToString(), currency.ToString(), additionalInformation.UnstructureMessage, additionalInformation.BillInformation, iban.ToString());
+                            printDebugImage(picturePath);
+                        }
+
+                        // Replace QR code bitmap in template
+                        if (strFilePath.Equals(""))
+                        {
+                            strFilePath = readQRCodeValue("QRFilePath");
+                        }
+                        string strQRTemplatePath = readQRCodeValue("QRTemplate");
+                        generateDocument(strQRTemplatePath, strFilePath, picturePath, false, "ORESZ");
+
+                        // delete temporary picture
+                        File.Delete(picturePath);
+                    }
+
+                }
+                catch (Exception ex)
+                {
+                    // Debug output
+                    if (bDebug == true)
+                    {
+                        printDebugMessage("generateQRCode: Exception=" + ex.Message);
+                    }
+                    else
+                    {
+                        MessageBox.Show(ex.Message, "Swiss QR Code Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+            else
+            {
+                MessageBox.Show("Please open a valid fotoleu excel workbook, which contains OR code value table!", "Swiss QR Code Generator", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
         public static void generateRechnung()
         {
             Microsoft.Office.Interop.Word.Application wordApp = null;
@@ -252,7 +413,7 @@ namespace fotoleuToolbox
                         printDebugMessage("generateRechnung: The first file has NOT been created! File1=" + strFile1);
                     }
                     #endregion
-                    generateQRCode(strFile2);   // generate QR code document
+                    generateQRCodeV2(strFile2);   // generate QR code document
                     #region Check that file exists
                     if (File.Exists(strFile2))
                     {
@@ -641,6 +802,64 @@ namespace fotoleuToolbox
             }
         }
 
+        /// <summary>
+        /// Reads the value for a named attribute passed by strValueName from a table with the name passed by strTablename.
+        /// The table contains three columns:
+        /// 1st column: Name         -> name of the attribute
+        /// 2nd column: Value        -> value which shall be insterted in final document
+        /// 3rd column: Placeholder  -> placeholder in template, which represents this attribute; will be replaced with the value above. 
+        /// </summary>
+        /// <param name="strTablename">Table name.</param>
+        /// <param name="ValueName">Value name.</param>
+        /// <returns></returns>
+        private static string readValueFromTable(string strTablename, string strValueName)
+        {
+            string strValueFound = "";
+
+            //Microsoft.Office.Interop.Excel.Workbook activateWorkbook = Globals.ThisAddIn.Application.ActiveWorkbook;
+            foreach (Microsoft.Office.Interop.Excel.Worksheet worksheet in Globals.ThisAddIn.Application.ActiveWorkbook.Worksheets)
+            {
+                foreach (Microsoft.Office.Interop.Excel.ListObject table in worksheet.ListObjects)
+                {
+                    if (table.Name.Equals(strTablename))
+                    {
+                        Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
+
+                        // Loop through rows ...
+                        foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
+                        {
+                            // Get attribute name (1. column)
+                            string strName = row.Cells[1, 1].Value2.ToString();
+                            if (strName.Equals(strValueName))
+                            {
+                                // Get attribute value (from 2. column) to be used to save this document
+                                if(row.Cells[1, 2].Value2 != null)
+                                {
+                                    strValueFound = row.Cells[1, 2].Value2.ToString();
+                                    return strValueFound;
+                                }
+                                else
+                                {
+                                    return "";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return strValueFound;
+        }
+
+        /// <summary>
+        /// Reads a bookmark value from a table with name "TabABBookmarks" on a dedicated sheet. It retruns the bookmark value for the bookmark with the name passed in by strSearchBookmarkName.
+        /// The table "TabABBookmarks" contains three columns:
+        /// 1st column: BookmarkName         -> name of the bookmark
+        /// 2nd column: BookmarkValue        -> value which shall be insterted in final document
+        /// 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
+        /// </summary>
+        /// <param name="sheet">Sheet object, where the table resides.</param>
+        /// <param name="strSearchBookmarkName">Name of the bookmark to be returned.</param>
+        /// <returns>Value of the bookmark. Returns empty string if bookmark hasn't been found.</returns>
         private static string readBookmarkValue(Microsoft.Office.Tools.Excel.Worksheet sheet, string strSearchBookmarkName)
         {
             string strBookmarkValueFound = "";
@@ -673,6 +892,26 @@ namespace fotoleuToolbox
                 }
             }
             return strBookmarkValueFound;
+        }
+
+        /// <summary>
+        /// Reads a bookmark value from a table with name "TabABBookmarks" in activate workbook. It retruns the bookmark value for the bookmark with the name passed in by strSearchBookmarkName.
+        /// </summary>
+        /// <param name="strSearchBookmarkName">Name of the bookmark to be returned.</param>
+        /// <returns>Value of the bookmark. Returns empty string if bookmark hasn't been found.</returns>
+        private static string readBookmarkValue(string strSearchBookmarkName)
+        {
+            return readValueFromTable("TabABBookmarks", strSearchBookmarkName);
+        }
+
+        /// <summary>
+        /// Reads a value for a named attribute from table "TabQRCode" in active worksheets.
+        /// </summary>
+        /// <param name="strQRCodeAttributeName">Name of the attribute.</param>
+        /// <returns>Value of the attribute. Returns "" if not found.</returns>
+        private static string readQRCodeValue(string strQRCodeAttributeName)
+        {
+            return readValueFromTable("TabQRCode", strQRCodeAttributeName);
         }
 
         private static bool openDebugSheet()

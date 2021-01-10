@@ -25,7 +25,7 @@ namespace fotoleuToolbox
 
         private void btnQR_Click(object sender, RibbonControlEventArgs e)
         {
-            fotoleuToolbox.generateQRCode("");
+            fotoleuToolbox.generateQRCodeV2("");
         }
 
         private void btnRechnung_Click(object sender, RibbonControlEventArgs e)
