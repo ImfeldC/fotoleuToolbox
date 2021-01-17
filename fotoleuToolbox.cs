@@ -438,62 +438,56 @@ namespace fotoleuToolbox
                     Microsoft.Office.Interop.Word.Document wordDoc = wordApp.Documents.Open(pathTemplate, ReadOnly: true);
                     int replaceCounter = 0;
 
-                    foreach (Microsoft.Office.Interop.Excel.Worksheet worksheet in Globals.ThisAddIn.Application.ActiveWorkbook.Worksheets)
+                    Microsoft.Office.Interop.Excel.ListObject table = getTable("TabABBookmarks");
+                    if (table != null)
                     {
-                        // Replace "bookmarks" within word document with real values from excel sheet
-                        foreach (Microsoft.Office.Interop.Excel.ListObject table in worksheet.ListObjects)
+                        // The table "TabABBookmarks" contains three columns:
+                        // 1st column: BookmarkName         -> name of the bookmark
+                        // 2nd column: BookmarkValue        -> value which shall be insterted in final document
+                        // 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
+                        #region Replace "bookmarks" within word document with real values from excel sheet
+                        Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
+
+                        // Loop through rows ...
+                        foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
                         {
-                            // The table "TabABBookmarks" contains three columns:
-                            // 1st column: BookmarkName         -> name of the bookmark
-                            // 2nd column: BookmarkValue        -> value which shall be insterted in final document
-                            // 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
-                            if (table.Name == "TabABBookmarks")
+                            string strBookmarkValue = "";
+                            string strBookmarkPlaceholder = "";
+
+                            // Get bookmark value (1. column)
+                            string strBookmarkName = row.Cells[1, 1].Value2.ToString();
+
+                            // Get bookmark value (2. column)
+                            strBookmarkValue = row.Cells[1, 2].Value2.ToString();
+
+                            // Get bookmark value (3. column)
+                            strBookmarkPlaceholder = row.Cells[1, 3].Value2.ToString();
+
+                            // Replace bookmark ...
+                            if (!strBookmarkValue.Equals(""))
                             {
-                                #region Replace "bookmarks" within word document with real values from excel sheet
-                                Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
+                                wordApp.Selection.Find.ClearFormatting();
+                                wordApp.Selection.Find.Replacement.ClearFormatting();
 
-                                // Loop through rows ...
-                                foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
+                                wordApp.Selection.Find.Text = strBookmarkPlaceholder;
+                                wordApp.Selection.Find.Replacement.Text = strBookmarkValue;
+                                wordApp.Selection.Find.Forward = true;
+                                wordApp.Selection.Find.Wrap = WdFindWrap.wdFindAsk;
+                                wordApp.Selection.Find.Format = false;
+                                wordApp.Selection.Find.MatchCase = false;
+                                wordApp.Selection.Find.MatchWholeWord = false;
+                                wordApp.Selection.Find.MatchWildcards = false;
+                                wordApp.Selection.Find.MatchSoundsLike = false;
+                                wordApp.Selection.Find.MatchAllWordForms = false;
+
+                                bool bReplace = wordApp.Selection.Find.Execute(Replace: WdReplace.wdReplaceAll);
+                                if (bReplace)
                                 {
-                                    string strBookmarkValue = "";
-                                    string strBookmarkPlaceholder = "";
-
-                                    // Get bookmark value (1. column)
-                                    string strBookmarkName = row.Cells[1, 1].Value2.ToString();
-
-                                    // Get bookmark value (2. column)
-                                    strBookmarkValue = row.Cells[1, 2].Value2.ToString();
-
-                                    // Get bookmark value (3. column)
-                                    strBookmarkPlaceholder = row.Cells[1, 3].Value2.ToString();
-
-                                    // Replace bookmark ...
-                                    if (!strBookmarkValue.Equals(""))
-                                    {
-                                        wordApp.Selection.Find.ClearFormatting();
-                                        wordApp.Selection.Find.Replacement.ClearFormatting();
-
-                                        wordApp.Selection.Find.Text = strBookmarkPlaceholder;
-                                        wordApp.Selection.Find.Replacement.Text = strBookmarkValue;
-                                        wordApp.Selection.Find.Forward = true;
-                                        wordApp.Selection.Find.Wrap = WdFindWrap.wdFindAsk;
-                                        wordApp.Selection.Find.Format = false;
-                                        wordApp.Selection.Find.MatchCase = false;
-                                        wordApp.Selection.Find.MatchWholeWord = false;
-                                        wordApp.Selection.Find.MatchWildcards = false;
-                                        wordApp.Selection.Find.MatchSoundsLike = false;
-                                        wordApp.Selection.Find.MatchAllWordForms = false;
-
-                                        bool bReplace = wordApp.Selection.Find.Execute(Replace: WdReplace.wdReplaceAll);
-                                        if (bReplace)
-                                        {
-                                            replaceCounter++;
-                                        }
-                                    }
+                                    replaceCounter++;
                                 }
-                                #endregion
                             }
                         }
+                        #endregion
                     }
 
                     #region replace QR code bitmap with real bitmap
@@ -663,34 +657,29 @@ namespace fotoleuToolbox
         {
             string strValueFound = "";
 
-            foreach (Microsoft.Office.Interop.Excel.Worksheet worksheet in Globals.ThisAddIn.Application.ActiveWorkbook.Worksheets)
+            Microsoft.Office.Interop.Excel.ListObject table = getTable(strTablename);
+            if (table != null)
             {
-                foreach (Microsoft.Office.Interop.Excel.ListObject table in worksheet.ListObjects)
-                {
-                    if (table.Name.Equals(strTablename))
-                    {
-                        Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
+                Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
 
-                        // Loop through rows ...
-                        foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
+                // Loop through rows ...
+                foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
+                {
+                    // Get attribute name (1. column)
+                    if(row.Cells[1, 1].Value2 != null)
+                    {
+                        string strName = row.Cells[1, 1].Value2.ToString();
+                        if (strName.Equals(strValueName))
                         {
-                            // Get attribute name (1. column)
-                            if(row.Cells[1, 1].Value2 != null)
+                            // Get attribute value (from 2. column) to be used to save this document
+                            if (row.Cells[1, 2].Value2 != null)
                             {
-                                string strName = row.Cells[1, 1].Value2.ToString();
-                                if (strName.Equals(strValueName))
-                                {
-                                    // Get attribute value (from 2. column) to be used to save this document
-                                    if (row.Cells[1, 2].Value2 != null)
-                                    {
-                                        strValueFound = row.Cells[1, 2].Value2.ToString();
-                                        return strValueFound;
-                                    }
-                                    else
-                                    {
-                                        return "";
-                                    }
-                                }
+                                strValueFound = row.Cells[1, 2].Value2.ToString();
+                                return strValueFound;
+                            }
+                            else
+                            {
+                                return "";
                             }
                         }
                     }
@@ -815,6 +804,21 @@ namespace fotoleuToolbox
                     s_debug_sheet.Shapes.AddPicture(strDebugImagePath, MsoTriState.msoFalse, MsoTriState.msoCTrue, debugLeft, debugTop, debugWidth, debugHeight);
                 }
             }
+        }
+
+        private static Microsoft.Office.Interop.Excel.ListObject getTable(string strTableName)
+        {
+            foreach (Microsoft.Office.Interop.Excel.Worksheet worksheet in Globals.ThisAddIn.Application.ActiveWorkbook.Worksheets)
+            {
+                foreach (Microsoft.Office.Interop.Excel.ListObject table in worksheet.ListObjects)
+                {
+                    if (table.Name.Equals(strTableName))
+                    {
+                        return table;
+                    }
+                }
+            }
+            return null;
         }
 
         public static string getCurrentToolboxVersion()
