@@ -27,12 +27,13 @@ namespace fotoleuToolbox
             Boolean bDebug = openDebugSheet();
             printDebugMessage("generateAuftragsblatt: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
 
-            Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
-            if( sheet != null )
+            string strVersion = readBookmarkValue("Version");
+            if ( !strVersion.Equals("") )
             {
+                printDebugMessage("generateAuftragsblatt: Start generating Auftragsblatt ... (strVersion=" + strVersion + ")");
                 try
                 {
-                    string pathTemplate = sheet.get_Range("G9").Value2.ToString();
+                    string pathTemplate = readBookmarkValue("DocTemplate");
 
                     generateDocument(pathTemplate, strFilePath, "", false, "AB");
                 }
@@ -67,8 +68,6 @@ namespace fotoleuToolbox
                 try
                 {
                     #region Read Values from table and create objects
-                    Microsoft.Office.Tools.Excel.Worksheet activesheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.ActiveSheet);
-
                     string contactIBAN = readQRCodeValue("IBAN");
                     PayloadGenerator.SwissQrCode.Iban iban = new PayloadGenerator.SwissQrCode.Iban(contactIBAN, PayloadGenerator.SwissQrCode.Iban.IbanType.Iban);
                     printDebugMessage("generateQRCode: Value read from table! contactIBAN=" + contactIBAN);
@@ -223,15 +222,16 @@ namespace fotoleuToolbox
             string strAddDebugInfo = "";
             printDebugMessage("generateRechnung: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
 
-            Microsoft.Office.Tools.Excel.Worksheet sheet = openFotoleuToolboxSheet("Auftragsblatt-Data");
-            if (sheet != null)
+            string strVersion = readBookmarkValue("Version");
+            if (!strVersion.Equals(""))
             {
+                printDebugMessage("generateRechnung: Start generating bill ... (strVersion=" + strVersion + ")");
                 try
                 {
-                    string pathTemplate = sheet.get_Range("G9").Value2.ToString();
+                    string pathTemplate = readBookmarkValue("DocTemplate");
                     strAddDebugInfo = "Template path read! pathTemplate=" + pathTemplate;
 
-                    string strAuftragID = readBookmarkValue(sheet, "AuftragID");
+                    string strAuftragID = readBookmarkValue("AuftragID");
                     strAddDebugInfo = "AuftragID read! strAuftragID=" + strAuftragID;
                     string strGUID = Guid.NewGuid().ToString();
                     // Temporary 1st word document
@@ -352,8 +352,8 @@ namespace fotoleuToolbox
                             section.Footers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
                         }
 
-                        string strFileName = readBookmarkValue(sheet, "Filename");
-                        string strFilePath = readBookmarkValue(sheet, "Filepath");
+                        string strFileName = readBookmarkValue("Filename");
+                        string strFilePath = readBookmarkValue("Filepath");
                         string strFileTarget = strFilePath + strFileName; ;
                         strAddDebugInfo = "Target filename and path read! strFileName=" + strFileName + ", strFilePath=" + strFilePath + ", strFileTarget=" + strFileTarget;
 
@@ -434,65 +434,67 @@ namespace fotoleuToolbox
                 Microsoft.Office.Interop.Word.Application wordApp = null;
                 try
                 {
-                    Microsoft.Office.Tools.Excel.Worksheet sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["Auftragsblatt-Data"]);
                     wordApp = new Microsoft.Office.Interop.Word.Application();
                     Microsoft.Office.Interop.Word.Document wordDoc = wordApp.Documents.Open(pathTemplate, ReadOnly: true);
-
-                    #region Replace "bookmarks" within word document with real values from excel sheet
-                    // Replace "bookmarks" within word document with real values from excel sheet
                     int replaceCounter = 0;
-                    foreach (Microsoft.Office.Interop.Excel.ListObject table in sheet.ListObjects)
+
+                    foreach (Microsoft.Office.Interop.Excel.Worksheet worksheet in Globals.ThisAddIn.Application.ActiveWorkbook.Worksheets)
                     {
-                        // The table "TabABBookmarks" contains three columns:
-                        // 1st column: BookmarkName         -> name of the bookmark
-                        // 2nd column: BookmarkValue        -> value which shall be insterted in final document
-                        // 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
-                        if (table.Name == "TabABBookmarks")
+                        // Replace "bookmarks" within word document with real values from excel sheet
+                        foreach (Microsoft.Office.Interop.Excel.ListObject table in worksheet.ListObjects)
                         {
-                            Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
-
-                            // Loop through rows ...
-                            foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
+                            // The table "TabABBookmarks" contains three columns:
+                            // 1st column: BookmarkName         -> name of the bookmark
+                            // 2nd column: BookmarkValue        -> value which shall be insterted in final document
+                            // 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
+                            if (table.Name == "TabABBookmarks")
                             {
-                                string strBookmarkValue = "";
-                                string strBookmarkPlaceholder = "";
+                                #region Replace "bookmarks" within word document with real values from excel sheet
+                                Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
 
-                                // Get bookmark value (1. column)
-                                string strBookmarkName = row.Cells[1, 1].Value2.ToString();
-
-                                // Get bookmark value (2. column)
-                                strBookmarkValue = row.Cells[1, 2].Value2.ToString();
-
-                                // Get bookmark value (3. column)
-                                strBookmarkPlaceholder = row.Cells[1, 3].Value2.ToString();
-
-                                // Replace bookmark ...
-                                if (!strBookmarkValue.Equals(""))
+                                // Loop through rows ...
+                                foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
                                 {
-                                    wordApp.Selection.Find.ClearFormatting();
-                                    wordApp.Selection.Find.Replacement.ClearFormatting();
+                                    string strBookmarkValue = "";
+                                    string strBookmarkPlaceholder = "";
 
-                                    wordApp.Selection.Find.Text = strBookmarkPlaceholder;
-                                    wordApp.Selection.Find.Replacement.Text = strBookmarkValue;
-                                    wordApp.Selection.Find.Forward = true;
-                                    wordApp.Selection.Find.Wrap = WdFindWrap.wdFindAsk;
-                                    wordApp.Selection.Find.Format = false;
-                                    wordApp.Selection.Find.MatchCase = false;
-                                    wordApp.Selection.Find.MatchWholeWord = false;
-                                    wordApp.Selection.Find.MatchWildcards = false;
-                                    wordApp.Selection.Find.MatchSoundsLike = false;
-                                    wordApp.Selection.Find.MatchAllWordForms = false;
+                                    // Get bookmark value (1. column)
+                                    string strBookmarkName = row.Cells[1, 1].Value2.ToString();
 
-                                    bool bReplace = wordApp.Selection.Find.Execute(Replace: WdReplace.wdReplaceAll);
-                                    if (bReplace)
+                                    // Get bookmark value (2. column)
+                                    strBookmarkValue = row.Cells[1, 2].Value2.ToString();
+
+                                    // Get bookmark value (3. column)
+                                    strBookmarkPlaceholder = row.Cells[1, 3].Value2.ToString();
+
+                                    // Replace bookmark ...
+                                    if (!strBookmarkValue.Equals(""))
                                     {
-                                        replaceCounter++;
+                                        wordApp.Selection.Find.ClearFormatting();
+                                        wordApp.Selection.Find.Replacement.ClearFormatting();
+
+                                        wordApp.Selection.Find.Text = strBookmarkPlaceholder;
+                                        wordApp.Selection.Find.Replacement.Text = strBookmarkValue;
+                                        wordApp.Selection.Find.Forward = true;
+                                        wordApp.Selection.Find.Wrap = WdFindWrap.wdFindAsk;
+                                        wordApp.Selection.Find.Format = false;
+                                        wordApp.Selection.Find.MatchCase = false;
+                                        wordApp.Selection.Find.MatchWholeWord = false;
+                                        wordApp.Selection.Find.MatchWildcards = false;
+                                        wordApp.Selection.Find.MatchSoundsLike = false;
+                                        wordApp.Selection.Find.MatchAllWordForms = false;
+
+                                        bool bReplace = wordApp.Selection.Find.Execute(Replace: WdReplace.wdReplaceAll);
+                                        if (bReplace)
+                                        {
+                                            replaceCounter++;
+                                        }
                                     }
                                 }
+                                #endregion
                             }
                         }
                     }
-                    #endregion
 
                     #region replace QR code bitmap with real bitmap
                     // replace QR code bitmap with real bitmap
@@ -547,10 +549,10 @@ namespace fotoleuToolbox
                     // save document with filename and path read from excel sheet
                     if (bSaveDocument)
                     {
-                        string strFileName = readBookmarkValue(sheet, "Filename");
+                        string strFileName = readBookmarkValue("Filename");
                         if (!strFileName.Equals(""))
                         {
-                            string strFilePath = readBookmarkValue(sheet, "Filepath");
+                            string strFilePath = readBookmarkValue("Filepath");
                             if (Directory.Exists(strFilePath))
                             {
                                 // add suffix - if available - to the filename
@@ -661,7 +663,6 @@ namespace fotoleuToolbox
         {
             string strValueFound = "";
 
-            //Microsoft.Office.Interop.Excel.Workbook activateWorkbook = Globals.ThisAddIn.Application.ActiveWorkbook;
             foreach (Microsoft.Office.Interop.Excel.Worksheet worksheet in Globals.ThisAddIn.Application.ActiveWorkbook.Worksheets)
             {
                 foreach (Microsoft.Office.Interop.Excel.ListObject table in worksheet.ListObjects)
@@ -696,50 +697,6 @@ namespace fotoleuToolbox
                 }
             }
             return strValueFound;
-        }
-
-        /// <summary>
-        /// Reads a bookmark value from a table with name "TabABBookmarks" on a dedicated sheet. It retruns the bookmark value for the bookmark with the name passed in by strSearchBookmarkName.
-        /// The table "TabABBookmarks" contains three columns:
-        /// 1st column: BookmarkName         -> name of the bookmark
-        /// 2nd column: BookmarkValue        -> value which shall be insterted in final document
-        /// 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
-        /// </summary>
-        /// <param name="sheet">Sheet object, where the table resides.</param>
-        /// <param name="strSearchBookmarkName">Name of the bookmark to be returned.</param>
-        /// <returns>Value of the bookmark. Returns empty string if bookmark hasn't been found.</returns>
-        private static string readBookmarkValue(Microsoft.Office.Tools.Excel.Worksheet sheet, string strSearchBookmarkName)
-        {
-            string strBookmarkValueFound = "";
-
-            // Replace "bookmarks" within word document with real values from excel sheet
-            int bookmarkCounter = 0;
-            foreach (Microsoft.Office.Interop.Excel.ListObject table in sheet.ListObjects)
-            {
-                // The table "TabABBookmarks" contains three columns:
-                // 1st column: BookmarkName         -> name of the bookmark
-                // 2nd column: BookmarkValue        -> value which shall be insterted in final document
-                // 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
-                if (table.Name == "TabABBookmarks")
-                {
-                    Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
-
-                    // Loop through rows ...
-                    foreach (Microsoft.Office.Interop.Excel.Range row in tableRange.Rows)
-                    {
-                        // Get bookmark value (1. column)
-                        string strBookmarkName = row.Cells[1, 1].Value2.ToString();
-                        if (strBookmarkName.Equals(strSearchBookmarkName))
-                        {
-                            bookmarkCounter++;
-                            // Get filename (from 2. column) to be used to save this document
-                            strBookmarkValueFound = row.Cells[1, 2].Value2.ToString();
-                            return strBookmarkValueFound;
-                        }
-                    }
-                }
-            }
-            return strBookmarkValueFound;
         }
 
         /// <summary>
