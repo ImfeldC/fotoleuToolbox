@@ -608,22 +608,6 @@ namespace fotoleuToolbox
             }
         }
 
-        private static Microsoft.Office.Tools.Excel.Worksheet openFotoleuToolboxSheet( string strFotoleuSheetName)
-        {
-            Microsoft.Office.Tools.Excel.Worksheet sheet=null;
-
-            try
-            {
-                sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets[strFotoleuSheetName]);
-            }
-            catch (Exception)
-            {
-                MessageBox.Show("Please open a valid fotoleu excel workbook, which contains sheet '" + strFotoleuSheetName +"'", "fotoleu Toolbox", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-
-            return sheet;
-        }
-
         private static float readFloatValue(dynamic value2)
         {
             try
