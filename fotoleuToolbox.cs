@@ -18,10 +18,10 @@ namespace fotoleuToolbox
         private static Microsoft.Office.Tools.Excel.Worksheet s_debug_sheet = null;
         private static Boolean s_bDebug = false;
 
-        public fotoleuToolbox()
-		{
-		}
-
+        /// <summary>
+        /// Generates a document, loads a word template and replaces placeholders with real values from excel table named "TabABBookmarks" 
+        /// </summary>
+        /// <param name="strFilePath">Target filename for final document.</param>
         public static void generateAuftragsblatt(string strFilePath)
         {
             Boolean bDebug = openDebugSheet();
@@ -214,6 +214,9 @@ namespace fotoleuToolbox
             }
         }
 
+        /// <summary>
+        /// Main function, combines the two methods generateAuftragsblatt and generateQRCodeV2 and creates combined final document.
+        /// </summary>
         public static void generateRechnung()
         {
             Microsoft.Office.Interop.Word.Application wordApp = null;
