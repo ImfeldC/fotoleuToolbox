@@ -20,18 +20,20 @@ namespace fotoleuToolbox
 
         private void btnAuftragsblatt_Click(object sender, RibbonControlEventArgs e)
         {
-            fotoleuToolbox.generateAuftragsblatt("");
+            fotoleuToolbox.printDebugMessage("----- Create Auftragsblatt -----", "btnAuftragsblatt_Click");
+            fotoleuToolbox.generateAuftragsblatt("",true);
         }
 
         private void btnQR_Click(object sender, RibbonControlEventArgs e)
         {
-            fotoleuToolbox.generateQRCodeV2("");
+            fotoleuToolbox.printDebugMessage("----- Create QR Code -----", "btnQR_Click");
+            fotoleuToolbox.generateQRCodeV2("",true);
         }
 
         private void btnRechnung_Click(object sender, RibbonControlEventArgs e)
         {
+            fotoleuToolbox.printDebugMessage("----- Create Rechnung -----", "btnRechnung_Click");
             fotoleuToolbox.generateRechnung();
-
         }
 
     }

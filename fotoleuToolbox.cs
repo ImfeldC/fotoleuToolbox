@@ -22,27 +22,33 @@ namespace fotoleuToolbox
         /// Generates a document, loads a word template and replaces placeholders with real values from excel table named "TabABBookmarks" 
         /// </summary>
         /// <param name="strFilePath">Target filename for final document.</param>
-        public static void generateAuftragsblatt(string strFilePath)
+        public static void generateAuftragsblatt(string strFilePath, bool bShowWord)
         {
             Boolean bDebug = openDebugSheet();
-            printDebugMessage("generateAuftragsblatt: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
+            printDebugMessage("generateAuftragsblatt: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")", "generateAuftragsblatt");
 
+            string strTemplateVersion = getCurrentTemplateVersion();
             string strVersion = readBookmarkValue("Version");
             if ( !strVersion.Equals("") )
             {
-                printDebugMessage("generateAuftragsblatt: Start generating Auftragsblatt ... (strVersion=" + strVersion + ")");
+                printDebugMessage("generateAuftragsblatt: Start generating Auftragsblatt ... (strVersion=" + strVersion + ", strTemplateVersion=" + strTemplateVersion + ")", "generateAuftragsblatt");
                 try
                 {
                     string pathTemplate = readBookmarkValue("DocTemplate");
 
-                    generateDocument(pathTemplate, strFilePath, "", false, "AB");
+                    // Replace QR code bitmap in template
+                    if (strFilePath.Equals(""))
+                    {
+                        strFilePath = readBookmarkValue("ABFilePath");
+                    }
+                    generateDocument(pathTemplate, strFilePath, "", bShowWord, false, "AB");
                 }
                 catch (Exception ex)
                 {
                     // Debug output
                     if (bDebug == true)
                     {
-                        printDebugMessage("generateAuftragsblatt: Exception=" + ex.Message);
+                        printDebugMessage("generateAuftragsblatt: Exception=" + ex.Message, "generateAuftragsblatt");
                     }
                     else
                     {
@@ -50,33 +56,38 @@ namespace fotoleuToolbox
                     }
                 }
             }
+            else
+            {
+                printDebugMessage("generateAuftragsblatt: Cannot read 'Version' with 'readBookmarkValue'", "generateAuftragsblatt");
+            }
         }
 
         /// <summary>
         /// Generates QR bitmap code, replaces them in the template and stores the newly generated file under the name passed by strFilePath.
         /// </summary>
         /// <param name="strFilePath">Target filename for newly created document.</param>
-        public static void generateQRCodeV2(string strFilePath)
+        public static void generateQRCodeV2(string strFilePath, bool bShowWord)
         {
             Boolean bDebug = openDebugSheet();
-            printDebugMessage("generateQRCode: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
+            printDebugMessage("generateQRCode: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")", "generateQRCodeV2");
 
+            string strTemplateVersion = getCurrentTemplateVersion();
             string strVersion = readQRCodeValue("Version");
             if (!strVersion.Equals(""))
             {
-                printDebugMessage("generateQRCode: Start generating QR codes ... (strVersion=" + strVersion + ")");
+                printDebugMessage("generateQRCode: Start generating QR codes ... (strVersion=" + strVersion + ", strTemplateVersion=" + strTemplateVersion + ")", "generateQRCodeV2");
                 try
                 {
                     #region Read Values from table and create objects
                     string contactIBAN = readQRCodeValue("IBAN");
                     PayloadGenerator.SwissQrCode.Iban iban = new PayloadGenerator.SwissQrCode.Iban(contactIBAN, PayloadGenerator.SwissQrCode.Iban.IbanType.Iban);
-                    printDebugMessage("generateQRCode: Value read from table! contactIBAN=" + contactIBAN);
+                    printDebugMessage("generateQRCode: Value read from table! contactIBAN=" + contactIBAN, "generateQRCodeV2");
 
                     string contactName = readQRCodeValue("ContactName");
                     string contactStreet = readQRCodeValue("ContactAdressLine1");
                     string contactPlace = readQRCodeValue("ContactAdressLine2");
                     string contactCountry = readQRCodeValue("ContactCountry");
-                    printDebugMessage("generateQRCode: Contact Values read from table! contactName=" + contactName);
+                    printDebugMessage("generateQRCode: Contact Values read from table! contactName=" + contactName, "generateQRCodeV2");
                     //PayloadGenerator.SwissQrCode.Contact contact = new PayloadGenerator.SwissQrCode.Contact(contactName, "CH", contactStreet, contactPlace);
                     PayloadGenerator.SwissQrCode.Contact contact = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(contactName, contactCountry, contactStreet, contactPlace);
 
@@ -84,7 +95,7 @@ namespace fotoleuToolbox
                     string debitorStreet = readQRCodeValue("DebitorAdressLine1");
                     string debitorPlace = readQRCodeValue("DebitorAdressLine2");
                     string debitorCountry = readQRCodeValue("DebitorCountry");
-                    printDebugMessage("generateQRCode: Debitor Values read from table! debitorName=" + debitorName);
+                    printDebugMessage("generateQRCode: Debitor Values read from table! debitorName=" + debitorName, "generateQRCodeV2");
                     //PayloadGenerator.SwissQrCode.Contact debitor = new PayloadGenerator.SwissQrCode.Contact(debitorName, "CH", debitorStreet, debitorPlace);
                     PayloadGenerator.SwissQrCode.Contact debitor = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(debitorName, debitorCountry, debitorStreet, debitorPlace);
 
@@ -102,7 +113,7 @@ namespace fotoleuToolbox
                     {
                         reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.NON);
                     }
-                    printDebugMessage("generateQRCode: Values read from table! strReference=" + strReference);
+                    printDebugMessage("generateQRCode: Values read from table! strReference=" + strReference, "generateQRCodeV2");
                     #endregion
 
                     string strAmount = readQRCodeValue("Amount");
@@ -114,7 +125,7 @@ namespace fotoleuToolbox
                     catch
                     {
                         // value cannot be converted in a "valid" decimal --> skip QR code production
-                        printDebugMessage("generateQRCode: Amount value cannot be converted in a 'valid' decimal --> skip QR code production! strAmount=" + strAmount);
+                        printDebugMessage("generateQRCode: Amount value cannot be converted in a 'valid' decimal --> skip QR code production! strAmount=" + strAmount, "generateQRCodeV2");
                         amount = -1;
                     }
                     if (amount >= 0)
@@ -153,7 +164,7 @@ namespace fotoleuToolbox
                             File.Delete(picturePath);
                         }
                         qrCodeAsBitmap.Save(picturePath, ImageFormat.Bmp);
-                        printDebugMessage("generateQRCode: QR code bitmap saved! picturePath=" + picturePath);
+                        printDebugMessage("generateQRCode: QR code bitmap saved! picturePath=" + picturePath, "generateQRCodeV2");
                         #endregion
 
                         #region Save QR code bitmap to an addtional (atlernative) file
@@ -170,15 +181,15 @@ namespace fotoleuToolbox
                         catch
                         {
                             // catch expception, e.g. in case filepath is not valid/accesible
-                            printDebugMessage("generateQRCode: Cannot save QR code bitmap to alternative path! altpicturePath=" + altpicturePath);
+                            printDebugMessage("generateQRCode: Cannot save QR code bitmap to alternative path! altpicturePath=" + altpicturePath, "generateQRCodeV2");
                         }
-                        printDebugMessage("generateQRCode: Alternative QR code bitmap saved! altpicturePath=" + altpicturePath);
+                        printDebugMessage("generateQRCode: Alternative QR code bitmap saved! altpicturePath=" + altpicturePath, "generateQRCodeV2");
                         #endregion
 
                         // Debug output
                         if (bDebug == true)
                         {
-                            printDebugMessage("QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath, contact.ToString(), debitor.ToString(), amount.ToString(), currency.ToString(), additionalInformation.UnstructureMessage, additionalInformation.BillInformation, iban.ToString());
+                            printDebugMessage("QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath, contact.ToString(), debitor.ToString(), amount.ToString(), currency.ToString(), additionalInformation.UnstructureMessage, additionalInformation.BillInformation, iban.ToString(), "generateQRCodeV2");
                             printDebugImage(picturePath);
                         }
 
@@ -188,7 +199,7 @@ namespace fotoleuToolbox
                             strFilePath = readQRCodeValue("QRFilePath");
                         }
                         string strQRTemplatePath = readQRCodeValue("QRTemplate");
-                        generateDocument(strQRTemplatePath, strFilePath, picturePath, false, "ORESZ");
+                        generateDocument(strQRTemplatePath, strFilePath, picturePath, bShowWord, false, "ORESZ");
 
                         // delete temporary picture
                         File.Delete(picturePath);
@@ -200,7 +211,7 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        printDebugMessage("generateQRCode: Exception=" + ex.Message);
+                        printDebugMessage("generateQRCode: Exception=" + ex.Message, "generateQRCodeV2");
                     }
                     else
                     {
@@ -210,6 +221,7 @@ namespace fotoleuToolbox
             }
             else
             {
+                printDebugMessage("generateQRCode: Cannot read 'Version' with 'readBookmarkValue'", "generateQRCodeV2");
                 MessageBox.Show("Please open a valid fotoleu excel workbook, which contains OR code value table!", "Swiss QR Code Generator", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
@@ -223,12 +235,13 @@ namespace fotoleuToolbox
 
             Boolean bDebug = openDebugSheet();
             string strAddDebugInfo = "";
-            printDebugMessage("generateRechnung: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")");
+            printDebugMessage("generateRechnung: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")", "generateRechnung");
 
+            string strTemplateVersion = getCurrentTemplateVersion();
             string strVersion = readBookmarkValue("Version");
             if (!strVersion.Equals(""))
             {
-                printDebugMessage("generateRechnung: Start generating bill ... (strVersion=" + strVersion + ")");
+                printDebugMessage("generateRechnung: Start generating bill ... (strVersion=" + strVersion + ", strTemplateVersion=" + strTemplateVersion +")", "generateRechnung");
                 try
                 {
                     string pathTemplate = readBookmarkValue("DocTemplate");
@@ -250,26 +263,26 @@ namespace fotoleuToolbox
                         File.Delete(strFile2);
                     }
 
-                    generateAuftragsblatt(strFile1);     // generate billing information (w/o QR code)
+                    generateAuftragsblatt(strFile1,false);     // generate billing information (w/o QR code)
                     #region Check that file exists
-                    if ( File.Exists(strFile1))
+                    if (File.Exists(strFile1))
                     {
-                        printDebugMessage("generateRechnung: The first file has been created! File1=" + strFile1);
+                        printDebugMessage("generateRechnung: The first file has been created! File1=" + strFile1, "generateRechnung");
                     }
                     else
                     {
-                        printDebugMessage("generateRechnung: The first file has NOT been created! File1=" + strFile1);
+                        printDebugMessage("generateRechnung: The first file has NOT been created! File1=" + strFile1, "generateRechnung");
                     }
                     #endregion
-                    generateQRCodeV2(strFile2);   // generate QR code document
+                    generateQRCodeV2(strFile2, false);   // generate QR code document
                     #region Check that file exists
                     if (File.Exists(strFile2))
                     {
-                        printDebugMessage("generateRechnung: The second file has been created! File2=" + strFile2);
+                        printDebugMessage("generateRechnung: The second file has been created! File2=" + strFile2, "generateRechnung");
                     }
                     else
                     {
-                        printDebugMessage("generateRechnung: The second file has NOT been created! File2=" + strFile2);
+                        printDebugMessage("generateRechnung: The second file has NOT been created! File2=" + strFile2, "generateRechnung");
                     }
                     #endregion
 
@@ -318,7 +331,7 @@ namespace fotoleuToolbox
                         strAddDebugInfo = "First Document into traget document copied!";
                         #endregion
 
-                        printDebugMessage("generateRechnung: Target file has been created! Number of words=" + wordDocTarget.Words.Count);
+                        printDebugMessage("generateRechnung: Target file has been created! Number of words=" + wordDocTarget.Words.Count, "generateRechnung");
 
                         #region Empty clipbord
                         // avoid word asking to keep clipboard when closing
@@ -363,11 +376,11 @@ namespace fotoleuToolbox
                         if (Directory.Exists(strFilePath))
                         {
                             wordDocTarget.SaveAs2(strFileTarget);
-                            printDebugMessage("generateRechnung: Target file has been saved! strFileTarget=" + strFileTarget);
+                            printDebugMessage("generateRechnung: Target file has been saved! strFileTarget=" + strFileTarget, "generateRechnung");
                         }
                         else
                         {
-                            printDebugMessage("generateRechnung: Path doesn't exists, cannot save file! strFilePath=" + strFilePath + ", strFileName=" + strFileName);
+                            printDebugMessage("generateRechnung: Path doesn't exists, cannot save file! strFilePath=" + strFilePath + ", strFileName=" + strFileName, "generateRechnung");
                         }
                         wordApp.Visible = true;
                         wordApp.Activate();
@@ -379,7 +392,7 @@ namespace fotoleuToolbox
                     else
                     {
                         // One or both files doesn't exists -> skip production of combined document
-                        printDebugMessage("generateRechnung: One or both files doesn't exist -> skip production of combined document");
+                        printDebugMessage("generateRechnung: One or both files doesn't exist -> skip production of combined document", "generateRechnung");
                     }
 
                     #region Delete temporary files
@@ -394,7 +407,7 @@ namespace fotoleuToolbox
                         {
                             File.Delete(strFile2);
                         }
-                        printDebugMessage("generateRechnung: The two single files have been deleted! File1=" + strFile1 + ", File2=" + strFile2);
+                        printDebugMessage("generateRechnung: The two single files have been deleted! File1=" + strFile1 + ", File2=" + strFile2, "generateRechnung");
                     }
                     #endregion
 
@@ -404,18 +417,22 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        printDebugMessage("generateRechnung: Exception=" + ex.Message + ", strAddDebugInfo=" + strAddDebugInfo);
+                        printDebugMessage("generateRechnung: Exception=" + ex.Message + ", strAddDebugInfo=" + strAddDebugInfo, "generateRechnung");
                     }
                     else
                     {
                         MessageBox.Show(ex.Message, "Document Generator", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
-                    if( (wordApp!=null) && (!wordApp.Visible) )
+                    if ((wordApp != null) && (!wordApp.Visible))
                     {
                         // Word APP is not visible yet -> close it
                         wordApp.Quit(SaveChanges: false);
                     }
                 }
+            }
+            else
+            {
+                printDebugMessage("generateRechnung: Cannot read 'Version' with 'readBookmarkValue'", "generateRechnung");
             }
         }
 
@@ -424,13 +441,15 @@ namespace fotoleuToolbox
         /// Replaces the bookmarks in the file template with real values read from excel sheet.
         /// </summary>
         /// <param name="pathTemplate">Name and path of the template.</param>
-        /// <param name="pathFilename">Name and path of the target document.</param>
+        /// <param name="pathFilename">Name and path of the target document. If empty, the word application is shown with the new generated document.</param>
         /// <param name="picturePath">Name and path of the QR code bitmap to be used in target document.</param>
         /// <param name="bSaveDocument">Create a copy of target docment, using filename and filepath read from excel sheet.</param>
         /// <param name="strFileNameSuffix">Suffix to be added to filename read from excel sheet.</param>
-        private static void generateDocument(string pathTemplate, string pathFilename, string picturePath, bool bSaveDocument, string strFileNameSuffix)
+        private static void generateDocument(string pathTemplate, string pathFilename, string picturePath, bool bShowWord, bool bSaveDocument, string strFileNameSuffix)
         {
             Boolean bDebug = openDebugSheet();
+            string strAddInfo = "";
+            printDebugMessage("generateDocument: pathTemplate=" + pathTemplate + ", pathFilename=" + pathFilename + ", picturePath=" + picturePath + ", bShowWord=" + bShowWord.ToString() + ", bSaveDocument=" + bSaveDocument.ToString() + ", strFileNameSuffix=" + strFileNameSuffix, "generateDocument");
 
             if (File.Exists(pathTemplate))
             {
@@ -441,6 +460,7 @@ namespace fotoleuToolbox
                     Microsoft.Office.Interop.Word.Document wordDoc = wordApp.Documents.Open(pathTemplate, ReadOnly: true);
                     int replaceCounter = 0;
 
+                    strAddInfo = "getTable(TabABBookmarks)";
                     Microsoft.Office.Interop.Excel.ListObject table = getTable("TabABBookmarks");
                     if (table != null)
                     {
@@ -449,6 +469,7 @@ namespace fotoleuToolbox
                         // 2nd column: BookmarkValue        -> value which shall be insterted in final document
                         // 3rd column: BookmarksPlaceholder -> placeholder in template, which represents this bookmark; will be replaced with the value above. 
                         #region Replace "bookmarks" within word document with real values from excel sheet
+                        strAddInfo = "Replace 'bookmarks' within word document with real values from excel sheet";
                         Microsoft.Office.Interop.Excel.Range tableRange = table.Range;
 
                         // Loop through rows ...
@@ -494,6 +515,7 @@ namespace fotoleuToolbox
                     }
 
                     #region replace QR code bitmap with real bitmap
+                    strAddInfo = "replace QR code bitmap with real bitmap";
                     // replace QR code bitmap with real bitmap
                     if (!picturePath.Equals(""))
                     {
@@ -539,10 +561,12 @@ namespace fotoleuToolbox
                     }
                     #endregion
 
+                    strAddInfo = "wordDoc: Fields Update and Activate";
                     wordDoc.Fields.Update();
                     wordDoc.Activate();
 
                     #region save document with filename and path read from excel sheet
+                    strAddInfo = "save document with filename and path read from excel sheet";
                     // save document with filename and path read from excel sheet
                     if (bSaveDocument)
                     {
@@ -558,41 +582,49 @@ namespace fotoleuToolbox
                                     strFileName = strFileName.Replace(".docx", "_" + strFileNameSuffix + ".docx");
                                 }
                                 wordDoc.SaveAs2(strFilePath + strFileName);
-                                printDebugMessage("generateDocument: Document saved! strFileName=" + strFileName + ", strFilePath=" + strFilePath);
+                                printDebugMessage("generateDocument: Document saved! strFileName=" + strFileName + ", strFilePath=" + strFilePath, "generateDocument");
                             }
                             else
                             {
-                                printDebugMessage("generateDocument: Path doesn't exists, cannot save file! strFileName=" + strFileName + ", strFilePath=" + strFilePath);
+                                printDebugMessage("generateDocument: Path doesn't exists, cannot save file! strFileName=" + strFileName + ", strFilePath=" + strFilePath, "generateDocument");
                             }
                         }
                     }
                     #endregion
 
-                    // save file OR show word app
+                    // save file
                     if (!pathFilename.Equals(""))
                     {
+                        strAddInfo = "save file";
                         wordDoc.SaveAs2(pathFilename);
-                        wordDoc.Close(SaveChanges: false);
-                        wordApp.Quit();
                     }
-                    else
+                    // show word app
+                    if (bShowWord)
                     {
+                        strAddInfo = "show word app";
                         wordApp.Visible = true;
                         wordApp.Activate();
                     }
+                    else
+                    {
+                        strAddInfo = "close wordDoc & wordApp";
+                        wordDoc.Close(SaveChanges: false);
+                        wordApp.Quit();
+                    }
 
-
+                    strAddInfo = "set wordDoc and wordApp to null";
                     wordDoc = null;
                     wordApp = null;
 
-                    printDebugMessage("generateDocument: Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Template=" + pathTemplate + ", Filepath=" + pathFilename);
+                    printDebugMessage("generateDocument: Document generated! " + replaceCounter.ToString() + " bookmarks replaced. Template=" + pathTemplate + ", Filepath=" + pathFilename, "generateDocument");
                 }
                 catch (Exception ex)
                 {
                     // Debug output
                     if (bDebug == true)
                     {
-                        printDebugMessage("generateDocument: Exception=" + ex.Message);
+                        //printDebugMessage("generateDocument: Info='" + strAddInfo + "' / Exception = '" + ex.Message , "generateDocument");
+                        printDebugMessage("generateDocument: Info='" + strAddInfo + "' / Exception = '" + ex.Message + "' / Template=" + pathTemplate + ", Filepath=" + pathFilename + ", PicturePath=" + picturePath + ", bSaveDocument=" + bSaveDocument + ", strFileNameSuffix=" + strFileNameSuffix, "generateDocument");
                     }
                     else
                     {
@@ -607,7 +639,7 @@ namespace fotoleuToolbox
             }
             else
             {
-                printDebugMessage("generateDocument: Document '" + pathTemplate + "' doesn't exists");
+                printDebugMessage("generateDocument: Document '" + pathTemplate + "' doesn't exists", "generateDocument");
             }
         }
 
@@ -721,7 +753,7 @@ namespace fotoleuToolbox
             return s_bDebug;
         }
 
-        private static void printDebugMessage(string strDebugMessage)
+        public static void printDebugMessage(string strDebugMessage, string strMethodName)
         {
             // Debug output
             if ((s_debug_sheet != null) && s_bDebug)
@@ -734,6 +766,10 @@ namespace fotoleuToolbox
                 newdebugcell.Value2 = DateTime.Now.ToString();
                 newdebugcell = s_debug_sheet.get_Range("B20");
                 newdebugcell.Value2 = strDebugMessage;
+                newdebugcell = s_debug_sheet.get_Range("H20");
+                newdebugcell.Value2 = strMethodName;
+                newdebugcell = s_debug_sheet.get_Range("I20");
+                newdebugcell.Value2 = Environment.MachineName;
             }
 
             /* doesn't work :-(
@@ -751,7 +787,7 @@ namespace fotoleuToolbox
             */
         }
 
-        private static void printDebugMessage(string strDebugMessage, string strContact, string strDebitor, string strAmount, string strCurrency, string strUnstructuredMessage, string strBillInfo, string strIBAN)
+        private static void printDebugMessage(string strDebugMessage, string strContact, string strDebitor, string strAmount, string strCurrency, string strUnstructuredMessage, string strBillInfo, string strIBAN, string strMethodName)
         {
             // Debug output
             if ((s_debug_sheet != null) && s_bDebug)
@@ -774,6 +810,10 @@ namespace fotoleuToolbox
                 newdebugcell.Value2 = "Additional Information: UnstructureMessage=" + strUnstructuredMessage + " / BillInformation=" + strBillInfo;
                 newdebugcell = s_debug_sheet.get_Range("G20");
                 newdebugcell.Value2 = "IBAN: " + strIBAN;
+                newdebugcell = s_debug_sheet.get_Range("H20");
+                newdebugcell.Value2 = strMethodName;
+                newdebugcell = s_debug_sheet.get_Range("I20");
+                newdebugcell.Value2 = Environment.MachineName;
             }
         }
 
@@ -808,6 +848,34 @@ namespace fotoleuToolbox
             return null;
         }
 
+        /// <summary>
+        /// Reads the template version from activate workbook.
+        /// Searches for a 'named cell' with the name 'Version' (or alternative 'TemplateVersion').
+        /// </summary>
+        /// <returns>Template Version as string. Returns 'n/a' when not availabe.</returns>
+        public static string getCurrentTemplateVersion()
+        {
+            foreach (Microsoft.Office.Interop.Excel.Worksheet worksheet in Globals.ThisAddIn.Application.ActiveWorkbook.Worksheets)
+            {
+                Microsoft.Office.Interop.Excel.Range cell1 = worksheet.Evaluate("Version") as Microsoft.Office.Interop.Excel.Range;
+                if (cell1 != null)
+                {
+                    return cell1.Value2.ToString();
+                }
+                Microsoft.Office.Interop.Excel.Range cell2 = worksheet.Evaluate("TemplateVersion") as Microsoft.Office.Interop.Excel.Range;
+                if (cell2 != null)
+                {
+                    return cell2.Value2.ToString();
+                }
+            }
+            return "n/a";
+        }
+
+        /// <summary>
+        /// Returns the Version of the installed fotoleu Toolbox.
+        /// NOTE: Doesn't work within debugger, there it retruns 'n/a'
+        /// </summary>
+        /// <returns>Version as string.</returns>
         public static string getCurrentToolboxVersion()
         {
             if( s_toolboxVersion.Equals(""))
