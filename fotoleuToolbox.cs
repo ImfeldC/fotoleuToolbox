@@ -519,9 +519,12 @@ namespace fotoleuToolbox
                     // replace QR code bitmap with real bitmap
                     if (!picturePath.Equals(""))
                     {
+                        printDebugMessage("generateDocument: Replace picture in document. picturePath=" + picturePath, "generateDocument");
 
                         // Replace QR image in shapes
                         // TODO: this code doesn't work yet; the image is NOT available/visible afterwards
+                        /*
+                        strAddInfo = "Replace QR image in shapes";
                         foreach (Microsoft.Office.Interop.Word.Shape s in wordDoc.Shapes)
                         {
                             if (s.AlternativeText.ToUpper().Contains("QRCODE"))
@@ -542,20 +545,44 @@ namespace fotoleuToolbox
 
                             }
                         }
+                        */
 
                         // Replace QR image in "inline" shapes
-                        foreach (Microsoft.Office.Interop.Word.InlineShape s in wordDoc.InlineShapes)
+                        strAddInfo = "Replace QR image in 'inline' shapes";
+                        int replaceQRCounter = 0;
+                        try
                         {
-                            if (s.AlternativeText.ToUpper().Contains("QRCODE"))
+                            foreach (Microsoft.Office.Interop.Word.InlineShape s in wordDoc.InlineShapes)
                             {
-                                Microsoft.Office.Interop.Word.Range range;
+                                if (s != null)
+                                {
+                                    if (s.AlternativeText.ToUpper().Contains("QRCODE"))
+                                    {
+                                        Microsoft.Office.Interop.Word.Range range;
 
-                                range = s.Range;
-                                Microsoft.Office.Interop.Word.InlineShape newShape = wordDoc.InlineShapes.AddPicture(picturePath, SaveWithDocument: true, Range: range);
-                                newShape.Width = s.Width;
-                                newShape.Height = s.Height;
-
-                                s.Delete();
+                                        range = s.Range;
+                                        if (range != null)
+                                        {
+                                            strAddInfo = "AddPicture( picturePath=" + picturePath + ", range.ID=" + range.ID;
+                                            Microsoft.Office.Interop.Word.InlineShape newShape = wordDoc.InlineShapes.AddPicture(picturePath, SaveWithDocument: true, Range: range);
+                                            if (newShape != null)
+                                            {
+                                                newShape.Width = s.Width;
+                                                newShape.Height = s.Height;
+                                                replaceQRCounter++;
+                                            }
+                                        }
+                                        s.Delete();
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Debug output
+                            if (bDebug == true)
+                            {
+                                printDebugMessage("generateDocument: Info='" + strAddInfo + "' / Exception = '" + ex.Message + " / replaceQRCounter=" + replaceQRCounter, "generateDocument");
                             }
                         }
                     }

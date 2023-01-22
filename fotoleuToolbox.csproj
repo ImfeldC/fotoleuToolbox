@@ -34,7 +34,7 @@
     <PublishUrl>D:\Meine Daten\Privat\fotoleu\fotoleuToolbox\publish\</PublishUrl>
     <InstallUrl />
     <TargetCulture>en</TargetCulture>
-    <ApplicationVersion>4.0.0.2</ApplicationVersion>
+    <ApplicationVersion>4.0.0.6</ApplicationVersion>
     <AutoIncrementApplicationRevision>true</AutoIncrementApplicationRevision>
     <UpdateEnabled>true</UpdateEnabled>
     <UpdateInterval>7</UpdateInterval>
