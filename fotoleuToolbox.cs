@@ -457,7 +457,7 @@ namespace fotoleuToolbox
                 try
                 {
                     wordApp = new Microsoft.Office.Interop.Word.Application();
-                    Microsoft.Office.Interop.Word.Document wordDoc = wordApp.Documents.Open(pathTemplate, ReadOnly: true);
+                    Microsoft.Office.Interop.Word.Document wordDoc = wordApp.Documents.Open(pathTemplate, ReadOnly: false);
                     int replaceCounter = 0;
 
                     strAddInfo = "getTable(TabABBookmarks)";
@@ -514,11 +514,11 @@ namespace fotoleuToolbox
                         #endregion
                     }
 
-                    #region replace QR code bitmap with real bitmap
                     strAddInfo = "replace QR code bitmap with real bitmap";
                     // replace QR code bitmap with real bitmap
                     if (!picturePath.Equals(""))
                     {
+                        #region replace QR code bitmap with real bitmap
                         printDebugMessage("generateDocument: Replace picture in document. picturePath=" + picturePath, "generateDocument");
 
                         // Replace QR image in shapes
@@ -585,8 +585,8 @@ namespace fotoleuToolbox
                                 printDebugMessage("generateDocument: Info='" + strAddInfo + "' / Exception = '" + ex.Message + " / replaceQRCounter=" + replaceQRCounter, "generateDocument");
                             }
                         }
+                        #endregion
                     }
-                    #endregion
 
                     strAddInfo = "wordDoc: Fields Update and Activate";
                     wordDoc.Fields.Update();

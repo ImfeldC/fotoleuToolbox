@@ -31,10 +31,10 @@
     <IsWebBootstrapper>False</IsWebBootstrapper>
     <TargetFrameworkProfile />
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <PublishUrl>D:\Meine Daten\Privat\fotoleu\fotoleuToolbox\publish\</PublishUrl>
+    <PublishUrl>\\192.168.1.118\OneDrive\_Dokumente\fotoleu 2023\fotoleuToolbox\publish\</PublishUrl>
     <InstallUrl />
     <TargetCulture>en</TargetCulture>
-    <ApplicationVersion>4.0.0.6</ApplicationVersion>
+    <ApplicationVersion>4.0.0.7</ApplicationVersion>
     <AutoIncrementApplicationRevision>true</AutoIncrementApplicationRevision>
     <UpdateEnabled>true</UpdateEnabled>
     <UpdateInterval>7</UpdateInterval>
