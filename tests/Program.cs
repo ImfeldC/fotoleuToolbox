@@ -33,11 +33,12 @@ internal static class Program
             Run("Amount bounds, precision and culture-independent numeric Excel values", Amounts);
             Run("UTF-8 bytes, no BOM and ECC M decoded from QR modules", DecodeModules);
             Run("QR bitmap with Swiss cross decodes correctly", DecodeBitmap);
+            Run("Bundled V5 workbook generates a structured QR, including without house numbers", BundledWorkbook);
 
             if (args.Length != 0)
             {
                 if (args.Length != 2 || args[0] != "--workbook")
-                    throw new ArgumentException("Usage: --workbook <path-to-xlsm>");
+                    throw new ArgumentException("Usage: --workbook <path-to-xlsx-or-xlsm>");
                 Run("Supplied workbook cached inputs generate a structured UTF-8 QR",
                     () => DecodeInput(new SwissQrCodeInput(ReadWorkbook(args[1]))));
             }
@@ -289,6 +290,35 @@ internal static class Program
             var segments = (IList<byte[]>)result.ResultMetadata[ResultMetadataType.BYTE_SEGMENTS];
             EqualBytes(Encoding.UTF8.GetBytes(input.Payload.ToString()), segments.SelectMany(segment => segment).ToArray());
         }
+    }
+
+    private static void BundledWorkbook()
+    {
+        var values = ReadWorkbook(Path.Combine(AppContext.BaseDirectory, "fotoleuToolbox.xlsx"));
+        Equal("5.0", values["Version"]);
+        if (!(values["Amount"] is double))
+            throw new Exception("The example amount must be an Excel numeric value.");
+        foreach (string prefix in new[] { "Contact", "Debitor" })
+        {
+            foreach (string suffix in new[] { "HouseNumber", "PostalCode" })
+                if (!(values[prefix + suffix] is string))
+                    throw new Exception("The example postal codes and house numbers must be text.");
+            Equal(((string)values[prefix + "Street"] + " " + (string)values[prefix + "HouseNumber"]).Trim(),
+                values[prefix + "AdressLine1"]);
+            Equal((string)values[prefix + "PostalCode"] + " " + (string)values[prefix + "City"],
+                values[prefix + "AdressLine2"]);
+        }
+        DecodeInput(new SwissQrCodeInput(values));
+
+        values["ContactHouseNumber"] = "";
+        values["DebitorHouseNumber"] = null;
+        var withoutHouseNumbers = new SwissQrCodeInput(values);
+        string[] lines = withoutHouseNumbers.Payload.ToString().Split(new[] { "\r\n" }, StringSplitOptions.None);
+        Equal(values["ContactStreet"], lines[6]);
+        Equal("", lines[7]);
+        Equal(values["DebitorStreet"], lines[22]);
+        Equal("", lines[23]);
+        DecodeInput(withoutHouseNumbers);
     }
 
     private static IDictionary<string, object> ReadWorkbook(string path)

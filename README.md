@@ -60,10 +60,11 @@ the existing Word templates, placeholders, bitmap handoff and invoice assembly:
   debug output. Banking-app acceptance was additionally reported by the operator;
   this is not a SIX certification or proof of an executed payment.
 
-**V5 requires a workbook migration.** Extend the existing productive workbook
-in place using the [structured-address instructions](#structured-addresses-for-swiss-qr-bills).
-The old combined-address keys are not used as a fallback. The bundled example
-workbook must also be migrated before use with V5.
+**Existing V4 and older workbooks require a migration.** Extend your productive
+workbook in place using the [structured-address instructions](#structured-addresses-for-swiss-qr-bills).
+The old combined-address keys are not used as a fallback. The bundled
+[`fotoleuToolbox.xlsx`](fotoleuToolbox.xlsx) is already updated for V5: new
+integrations do not need to migrate its address schema.
 
 The toolbox version reported in the debug log is separate from the workbook's
 `Version` and template-version values. Existing configuration values such as
@@ -81,19 +82,43 @@ The main logic is in fotoleuToolbox.cs, which contains three main functions:
    For a new integration, copy them from `fotoleuToolbox.xlsx`.
 3. Link the values in the second column of each table to your workbook data and
    configure the Word-template and output paths.
-4. For V5, migrate `TabQRCode` to the structured-address schema below, including
-   when starting from the bundled example workbook.
+4. The current example already contains the V5 structured-address schema.
+   Only existing V4 or older workbooks need the migration described below.
 5. To enable debug feedback, keep or copy the `SwissQRCode-Debug` worksheet and
    set cell **D2 to `ON`**.
+
+## Using the V5 example workbook
+
+[`fotoleuToolbox.xlsx`](fotoleuToolbox.xlsx) contains a complete V5 `TabQRCode`
+table on `Auftragsblatt-Data`, including all structured-address keys and populated
+sample values. No manual address-schema migration is needed.
+
+- Enter the creditor's street, house number, postal code and city in **E65:E68**,
+  and the debtor's corresponding values in **E69:E72**. The existing name and
+  country rows remain in `TabQRCode`.
+- Postal codes and house numbers are formatted as text. Leave a house number
+  empty when the address has none; do not enter `0`, `-` or `PRUEFEN`.
+- The legacy combined-address values are formulas derived from the structured
+  fields. The matching printed-address values in `TabABBookmarks` are linked to
+  them, so the sample's printed addresses and QR payload stay aligned.
+- Enter the IBAN in `TabQRCode` (**E48**); the printed IBAN is linked to it.
+  The sample amount (**E57**) is numeric and also feeds the printed amount values.
+- Replace the illustrative recipient, customer, account and invoice/reference
+  data before creating real invoices. Configure the Word-template and output
+  paths for your PC. V5-ready refers to the schema, not to preconfigured local
+  paths or an account suitable for your payments.
+
+The existing debug and creditor-reference worksheets are retained. The regression
+runner automatically checks this bundled workbook and decodes its generated QR.
 
 ## Structured addresses for Swiss QR-bills
 
 The updated add-in requires address type **S** for both the creditor and debtor.
-Update your existing productive workbook in place; do not replace it with an empty
-workbook. The example `fotoleuToolbox.xlsx` still contains the legacy combined-address
-fields and must also be migrated before use with this version.
+The instructions below apply to existing workbooks that have not yet been
+migrated. Update a productive workbook in place; do not replace it with an empty
+workbook. The current bundled example already has this schema.
 
-Keep the existing `TabQRCode` table and add the following keys in its `Name` column:
+Keep the existing `TabQRCode` table and add any missing keys in its `Name` column:
 
 | Creditor (business configuration) | Debtor (selected customer) |
 |---|---|
@@ -174,7 +199,9 @@ Do not change the assembly-signing key when renewing the publishing certificate.
 ### QR regression checks
 
 The Office-independent tests require the .NET 10 SDK on Windows. ZXing.Net is a
-test-only decoder dependency; it is not added to the VSTO add-in.
+test-only decoder dependency; it is not added to the VSTO add-in. The default run
+includes the bundled V5 example workbook, numeric input types, decoded QR bytes
+and blank house numbers with populated streets.
 
 ```powershell
 dotnet run --project .\tests\SwissQrCode.Tests.csproj

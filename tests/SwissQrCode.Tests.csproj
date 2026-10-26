@@ -11,5 +11,6 @@
     <Compile Include="..\QRCoder\*.cs" Link="QRCoder\%(Filename)%(Extension)" />
     <PackageReference Include="ZXing.Net" Version="0.16.11" />
     <Content Include="..\Properties\CH-Kreuz_7mm.png" Link="CH-Kreuz_7mm.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\fotoleuToolbox.xlsx" Link="fotoleuToolbox.xlsx" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
