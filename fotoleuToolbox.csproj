@@ -238,6 +238,7 @@
       <DependentUpon>RibbonButton.cs</DependentUpon>
     </Compile>
     <Compile Include="fotoleuToolbox.cs" />
+    <Compile Include="SwissQrCodeInput.cs" />
     <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>
     </Compile>
@@ -263,10 +264,10 @@
     <SignManifests>true</SignManifests>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>fotoleuToolbox_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>fotoleuToolbox publishing 2026.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>FF882BA11C3215E1BE11AA5F54C94B5398E199F6</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>C16CDF5AD534850CCFD638AEBDFDA40E75AA93AB</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
     <SignAssembly>true</SignAssembly>

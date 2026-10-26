@@ -647,6 +647,7 @@ namespace QRCoder
 
         public class SwissQrCode : Payload
         {
+            private const string charsetPattern = @"\A[\u0020-\u007E\u00A0-\u017F\u0218-\u021B\u20AC]*\z";
             //Keep in mind, that the ECC level has to be set to "M" when generating a SwissQrCode!
             //SwissQrCode specification: 
             //    - (de) https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-de.pdf
@@ -685,8 +686,9 @@ namespace QRCoder
 
                 this.additionalInformation = additionalInformation != null ? additionalInformation : new AdditionalInformation();
 
-                if (amount != null && amount.ToString().Length > 12)
-                    throw new SwissQrCodeException("Amount (including decimals) must be shorter than 13 places.");
+                if (amount.HasValue && (amount.Value < 0.01m || amount.Value > 999999999.99m ||
+                    decimal.Round(amount.Value, 2) != amount.Value))
+                    throw new SwissQrCodeException("Amount must be between 0.01 and 999999999.99 with at most two decimal places.");
                 this.amount = amount;
 
                 this.currency = currency;
@@ -697,6 +699,8 @@ namespace QRCoder
                     throw new SwissQrCodeException("If QR-IBAN is used, you have to choose \"QRR\" as reference type!");
                 if (!iban.IsQrIban && reference.RefType == Reference.ReferenceType.QRR)
                     throw new SwissQrCodeException("If non QR-IBAN is used, you have to choose either \"SCOR\" or \"NON\" as reference type!");
+                if (iban.IsQrIban && currency != Currency.CHF)
+                    throw new SwissQrCodeException("QR-IBAN and QR reference are only permitted for CHF.");
                 this.reference = reference;
 
                 if (alternativeProcedure1 != null && alternativeProcedure1.Length > 100)
@@ -718,6 +722,9 @@ namespace QRCoder
                /// <param name="billInformation">Bill information</param>
                 public AdditionalInformation(string unstructuredMessage = null, string billInformation = null)
                 {
+                    if ((unstructuredMessage != null && !Regex.IsMatch(unstructuredMessage, charsetPattern)) ||
+                        (billInformation != null && !Regex.IsMatch(billInformation, charsetPattern)))
+                        throw new SwissQrCodeAdditionalInformationException("Additional information contains unsupported characters or line breaks.");
                     if (((unstructuredMessage != null ? unstructuredMessage.Length : 0) + (billInformation != null ? billInformation.Length : 0)) > 140)
                         throw new SwissQrCodeAdditionalInformationException("Unstructured message and bill information must be shorter than 141 chars in total/combined.");
                     this.unstructuredMessage = unstructuredMessage;
@@ -786,8 +793,11 @@ namespace QRCoder
                         throw new SwissQrCodeReferenceException("QR-reference must exist out of digits only.");
                     if (referenceTextType == ReferenceTextType.QrReference && reference != null && !ChecksumMod10(reference))
                         throw new SwissQrCodeReferenceException("QR-references is invalid. Checksum error.");
-                    if (referenceTextType == ReferenceTextType.CreditorReferenceIso11649 && reference != null && (reference.Length > 25))
-                        throw new SwissQrCodeReferenceException("Creditor references (ISO 11649) have to be shorter than 26 chars.");
+                    if (referenceType == ReferenceType.SCOR &&
+                        (referenceTextType != ReferenceTextType.CreditorReferenceIso11649 ||
+                        reference == null || !Regex.IsMatch(reference, @"\ARF[0-9]{2}[A-Z0-9]{1,21}\z") ||
+                        !HasValidIsoChecksum(reference)))
+                        throw new SwissQrCodeReferenceException("SCOR must be a valid ISO 11649 creditor reference (RF prefix and modulo-97 checksum).");
 
                     this.reference = reference;                   
                 }
@@ -847,12 +857,16 @@ namespace QRCoder
                 /// <param name="ibanType">Type of IBAN (normal or QR-IBAN)</param>
                 public Iban(string iban, IbanType ibanType)
                 {
-                    if (ibanType == IbanType.Iban && !IsValidIban(iban))
-                        throw new SwissQrCodeIbanException("The IBAN entered isn't valid.");
-                    if (ibanType == IbanType.QrIban && !IsValidQRIban(iban))
-                        throw new SwissQrCodeIbanException("The QR-IBAN entered isn't valid.");
-                    if (!iban.StartsWith("CH") && !iban.StartsWith("LI"))
-                        throw new SwissQrCodeIbanException("The IBAN must start with \"CH\" or \"LI\".");
+                    iban = (iban ?? "").Replace(" ", "").Replace("-", "").ToUpperInvariant();
+                    if (!Regex.IsMatch(iban, @"\A(CH|LI)[0-9]{7}[A-Z0-9]{12}\z") || !HasValidIsoChecksum(iban))
+                        throw new SwissQrCodeIbanException("The account must be a valid 21-character CH or LI IBAN.");
+
+                    int iid = int.Parse(iban.Substring(4, 5), CultureInfo.InvariantCulture);
+                    bool isQrIban = iid >= 30000 && iid <= 31999;
+                    if (isQrIban != (ibanType == IbanType.QrIban))
+                        throw new SwissQrCodeIbanException(isQrIban
+                            ? "A QR-IBAN cannot be used as a normal IBAN with SCOR or NON."
+                            : "The account is a normal IBAN, not a QR-IBAN.");
                     this.iban = iban;
                     this.ibanType = ibanType;
                 }
@@ -938,9 +952,6 @@ namespace QRCoder
 
                 private Contact(string name, string zipCode, string city, string country, string streetOrAddressline1, string houseNumberOrAddressline2, AddressType addressType)
                 {
-                    //Pattern extracted from https://qr-validation.iso-payments.ch as explained in https://github.com/codebude/QRCoder/issues/97
-                    var charsetPattern = @"^([a-zA-Z0-9\.,;:'\ \+\-/\(\)?\*\[\]\{\}\\`´~ ]|[!""#%&<>÷=@_$£]|[àáâäçèéêëìíîïñòóôöùúûüýßÀÁÂÄÇÈÉÊËÌÍÎÏÒÓÔÖÙÚÛÜÑ])*$";
-
                     this.adrType = addressType;
 
                     if (string.IsNullOrEmpty(name))
@@ -961,6 +972,8 @@ namespace QRCoder
 
                         if (!string.IsNullOrEmpty(houseNumberOrAddressline2) && houseNumberOrAddressline2.Length > 16)
                             throw new SwissQrCodeContactException("House number must be shorter than 17 chars.");
+                        if (!string.IsNullOrEmpty(houseNumberOrAddressline2) && !Regex.IsMatch(houseNumberOrAddressline2, charsetPattern))
+                            throw new SwissQrCodeContactException("House number contains unsupported characters or line breaks.");
                         this.houseNumberOrAddressline2 = houseNumberOrAddressline2;
                     }
                     else
@@ -1072,7 +1085,7 @@ namespace QRCoder
 
                 //CcyAmtDate "logical" element
                 //Amoutn has to use . as decimal seperator in any case. See https://www.paymentstandards.ch/dam/downloads/ig-qr-bill-en.pdf page 27.
-                SwissQrCodePayload += (amount != null ? $"{amount:0.00}".Replace(",", ".") : string.Empty) + br; //Amt
+                SwissQrCodePayload += (amount.HasValue ? amount.Value.ToString("0.00", CultureInfo.InvariantCulture) : string.Empty) + br; //Amt
                 SwissQrCodePayload += currency + br; //Ccy                
                 //Removed in S-QR version 2.0
                 //SwissQrCodePayload += (requestedDateOfPayment != null ?  ((DateTime)requestedDateOfPayment).ToString("yyyy-MM-dd") : string.Empty) + br; //ReqdExctnDt
@@ -1100,14 +1113,21 @@ namespace QRCoder
                 if (!string.IsNullOrEmpty(alternativeProcedure2))
                     SwissQrCodePayload += alternativeProcedure2.Replace("\n", "") + br; //AltPmt
 
-                //S-QR specification 2.0, chapter 4.2.3
-                if (SwissQrCodePayload.EndsWith(br))
-                    SwissQrCodePayload = SwissQrCodePayload.Remove(SwissQrCodePayload.Length - br.Length);
-
-                return SwissQrCodePayload;
+                // Unused trailing additional fields and the final separator are omitted.
+                return SwissQrCodePayload.TrimEnd('\r', '\n');
             }
 
-
+            private static bool HasValidIsoChecksum(string value)
+            {
+                string rearranged = value.Substring(4) + value.Substring(0, 4);
+                int remainder = 0;
+                foreach (char character in rearranged)
+                {
+                    int digit = character >= 'A' && character <= 'Z' ? character - 'A' + 10 : character - '0';
+                    remainder = (remainder * (digit >= 10 ? 100 : 10) + digit) % 97;
+                }
+                return remainder == 1;
+            }
 
 
             /// <summary>

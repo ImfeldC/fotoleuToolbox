@@ -3,12 +3,12 @@ using Microsoft.Office.Interop.Excel;
 using Microsoft.Office.Interop.Word;
 using QRCoder;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
 using System.Deployment.Application;
-using static QRCoder.PayloadGenerator.SwissQrCode.Reference;
 
 namespace fotoleuToolbox
 {
@@ -78,84 +78,16 @@ namespace fotoleuToolbox
                 printDebugMessage("generateQRCode: Start generating QR codes ... (strVersion=" + strVersion + ", strTemplateVersion=" + strTemplateVersion + ")", "generateQRCodeV2");
                 try
                 {
-                    #region Read Values from table and create objects
-                    string contactIBAN = readQRCodeValue("IBAN");
-                    PayloadGenerator.SwissQrCode.Iban iban = new PayloadGenerator.SwissQrCode.Iban(contactIBAN, PayloadGenerator.SwissQrCode.Iban.IbanType.Iban);
-                    printDebugMessage("generateQRCode: Value read from table! contactIBAN=" + contactIBAN, "generateQRCodeV2");
-
-                    string contactName = readQRCodeValue("ContactName");
-                    string contactStreet = readQRCodeValue("ContactAdressLine1");
-                    string contactPlace = readQRCodeValue("ContactAdressLine2");
-                    string contactCountry = readQRCodeValue("ContactCountry");
-                    printDebugMessage("generateQRCode: Contact Values read from table! contactName=" + contactName, "generateQRCodeV2");
-                    //PayloadGenerator.SwissQrCode.Contact contact = new PayloadGenerator.SwissQrCode.Contact(contactName, "CH", contactStreet, contactPlace);
-                    PayloadGenerator.SwissQrCode.Contact contact = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(contactName, contactCountry, contactStreet, contactPlace);
-
-                    string debitorName = readQRCodeValue("DebitorName");
-                    string debitorStreet = readQRCodeValue("DebitorAdressLine1");
-                    string debitorPlace = readQRCodeValue("DebitorAdressLine2");
-                    string debitorCountry = readQRCodeValue("DebitorCountry");
-                    printDebugMessage("generateQRCode: Debitor Values read from table! debitorName=" + debitorName, "generateQRCodeV2");
-                    //PayloadGenerator.SwissQrCode.Contact debitor = new PayloadGenerator.SwissQrCode.Contact(debitorName, "CH", debitorStreet, debitorPlace);
-                    PayloadGenerator.SwissQrCode.Contact debitor = PayloadGenerator.SwissQrCode.Contact.WithCombinedAddress(debitorName, debitorCountry, debitorStreet, debitorPlace);
-
-                    string additionalInfo1 = readQRCodeValue("UnstructureMessage");
-                    string additionalInfo2 = readQRCodeValue("BillInformation");
-                    PayloadGenerator.SwissQrCode.AdditionalInformation additionalInformation = new PayloadGenerator.SwissQrCode.AdditionalInformation(additionalInfo1, additionalInfo2);
-
-                    PayloadGenerator.SwissQrCode.Reference reference;
-                    string strReference = readQRCodeValue("SCOR");
-                    if (!strReference.Equals(""))
+                    printDebugMessage("generateQRCode: Reading structured address fields from TabQRCode.", "generateQRCodeV2");
+                    var input = new SwissQrCodeInput(readQRCodeInputValues());
+                    printDebugMessage("generateQRCode: Validated creditor and debtor addresses (S), amount and account. " +
+                        "Reference=" + input.Reference.RefType + " / " + input.Reference.ReferenceText +
+                        "; encoding=UTF-8; ECC=M.", "generateQRCodeV2");
+                    using (QRCodeData qrCodeData = input.CreateQrCode())
+                    using (QRCode qrCode = new QRCode(qrCodeData))
+                    using (Bitmap qrCodeAsBitmap = qrCode.GetGraphic(
+                        20, Color.Black, Color.White, Properties.Resources.CH_Kreuz_7mm, 14, 1))
                     {
-                        reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.SCOR, strReference, ReferenceTextType.CreditorReferenceIso11649);
-                    }
-                    else
-                    {
-                        reference = new PayloadGenerator.SwissQrCode.Reference(PayloadGenerator.SwissQrCode.Reference.ReferenceType.NON);
-                    }
-                    printDebugMessage("generateQRCode: Values read from table! strReference=" + strReference, "generateQRCodeV2");
-                    #endregion
-
-                    string strAmount = readQRCodeValue("Amount");
-                    decimal amount = -1;
-                    try
-                    {
-                        amount = decimal.Parse(strAmount);
-                    }
-                    catch
-                    {
-                        // value cannot be converted in a "valid" decimal --> skip QR code production
-                        printDebugMessage("generateQRCode: Amount value cannot be converted in a 'valid' decimal --> skip QR code production! strAmount=" + strAmount, "generateQRCodeV2");
-                        amount = -1;
-                    }
-                    if (amount >= 0)
-                    {
-                        #region Retrieve Currency
-                        //PayloadGenerator.SwissQrCode.Currency currency = PayloadGenerator.SwissQrCode.Currency.CHF;
-                        string strCurrency = readQRCodeValue("Currency");
-                        PayloadGenerator.SwissQrCode.Currency currency;
-                        if (strCurrency.Equals("CHF"))
-                        {
-                            currency = PayloadGenerator.SwissQrCode.Currency.CHF;
-                        }
-                        else if (strCurrency.Equals("EUR"))
-                        {
-                            currency = PayloadGenerator.SwissQrCode.Currency.EUR;
-                        }
-                        else
-                        {
-                            throw new Exception("Currency not supported: strCurrency=" + strCurrency);
-                        }
-                        #endregion
-
-                        // Create QR Code
-                        PayloadGenerator.SwissQrCode generator = new PayloadGenerator.SwissQrCode(iban, currency, contact, reference, additionalInformation, debitor, amount);
-
-                        QRCodeGenerator qrGenerator = new QRCodeGenerator();
-                        QRCodeData qrCodeData = qrGenerator.CreateQrCode(generator.ToString(), QRCodeGenerator.ECCLevel.M);
-                        QRCode qrCode = new QRCode(qrCodeData);
-                        Bitmap qrCodeAsBitmap = qrCode.GetGraphic(20, Color.Black, Color.White, Properties.Resources.CH_Kreuz_7mm, 14, 1);
-
                         #region Save QR code bitmap, to be used in further processing
                         // Temporary qrcode bitmap
                         string picturePath = Path.GetTempPath() + "qrcode.bmp";
@@ -170,26 +102,39 @@ namespace fotoleuToolbox
                         #region Save QR code bitmap to an addtional (atlernative) file
                         // alternative qrcode bitmap
                         string altpicturePath = readQRCodeValue("BitmapPath");
-                        if (File.Exists(altpicturePath))
+                        if (!string.IsNullOrWhiteSpace(altpicturePath))
                         {
-                            File.Delete(altpicturePath);
+                            try
+                            {
+                                if (File.Exists(altpicturePath))
+                                    File.Delete(altpicturePath);
+                                qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
+                                printDebugMessage("generateQRCode: Alternative QR code bitmap saved! altpicturePath=" + altpicturePath, "generateQRCodeV2");
+                            }
+                            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException ||
+                                ex is ArgumentException || ex is NotSupportedException ||
+                                ex is System.Runtime.InteropServices.ExternalException)
+                            {
+                                string warning = "The optional QR bitmap copy could not be saved: " + ex.Message +
+                                    " The main QR image was generated; document processing will continue.";
+                                printDebugMessage("generateQRCode: WARNING: " + warning, "generateQRCodeV2");
+                                if (!bDebug)
+                                    MessageBox.Show(warning, "Swiss QR Code Generator", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            }
                         }
-                        try
-                        {   // save bitmap on alternative path
-                            qrCodeAsBitmap.Save(altpicturePath, ImageFormat.Bmp);
-                        }
-                        catch
+                        else
                         {
-                            // catch expception, e.g. in case filepath is not valid/accesible
-                            printDebugMessage("generateQRCode: Cannot save QR code bitmap to alternative path! altpicturePath=" + altpicturePath, "generateQRCodeV2");
+                            printDebugMessage("generateQRCode: Optional bitmap copy skipped (BitmapPath is empty).", "generateQRCodeV2");
                         }
-                        printDebugMessage("generateQRCode: Alternative QR code bitmap saved! altpicturePath=" + altpicturePath, "generateQRCodeV2");
                         #endregion
 
                         // Debug output
                         if (bDebug == true)
                         {
-                            printDebugMessage("QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath, contact.ToString(), debitor.ToString(), amount.ToString(), currency.ToString(), additionalInformation.UnstructureMessage, additionalInformation.BillInformation, iban.ToString(), "generateQRCodeV2");
+                            printDebugMessage("QR Code generated! Path=" + picturePath + " / AltPath=" + altpicturePath,
+                                input.Creditor.ToString(), input.Debitor.ToString(), input.Amount.ToString(),
+                                input.Currency.ToString(), input.AdditionalInformation.UnstructureMessage,
+                                input.AdditionalInformation.BillInformation, input.Iban.ToString(), "generateQRCodeV2");
                             printDebugImage(picturePath);
                         }
 
@@ -211,7 +156,7 @@ namespace fotoleuToolbox
                     // Debug output
                     if (bDebug == true)
                     {
-                        printDebugMessage("generateQRCode: Exception=" + ex.Message, "generateQRCodeV2");
+                        printDebugMessage("generateQRCode: ERROR: QR generation stopped. " + ex.Message, "generateQRCodeV2");
                     }
                     else
                     {
@@ -754,14 +699,32 @@ namespace fotoleuToolbox
             return readValueFromTable("TabQRCode", strQRCodeAttributeName);
         }
 
+        private static IDictionary<string, object> readQRCodeInputValues()
+        {
+            Microsoft.Office.Interop.Excel.ListObject table = getTable("TabQRCode");
+            if (table == null || table.DataBodyRange == null)
+                throw new FormatException("The workbook must contain a populated table named 'TabQRCode'.");
+
+            var values = new Dictionary<string, object>(StringComparer.Ordinal);
+            foreach (Microsoft.Office.Interop.Excel.Range row in table.DataBodyRange.Rows)
+            {
+                string key = Convert.ToString(row.Cells[1, 1].Value2).Trim();
+                if (key.Length == 0)
+                    throw new FormatException("TabQRCode contains an empty field name.");
+                if (values.ContainsKey(key))
+                    throw new FormatException("TabQRCode contains the duplicate field '" + key + "'. Keep only one entry.");
+                if (Globals.ThisAddIn.Application.WorksheetFunction.IsError(row.Cells[1, 2]))
+                    throw new FormatException("TabQRCode '" + key + "' contains an Excel formula error. Correct its source cell.");
+                values.Add(key, row.Cells[1, 2].Value2);
+            }
+            return values;
+        }
+
         private static bool openDebugSheet()
         {
             try
             {
-                if(s_debug_sheet == null)
-                {
-                    s_debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
-                }
+                s_debug_sheet = Globals.Factory.GetVstoObject(Globals.ThisAddIn.Application.ActiveWorkbook.Sheets["SwissQRCode-Debug"]);
                 if (s_debug_sheet.get_Range("D2").Value2 == "ON")
                 {
                     s_bDebug = true;
