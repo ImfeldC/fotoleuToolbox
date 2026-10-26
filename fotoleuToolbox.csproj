@@ -31,7 +31,7 @@
     <IsWebBootstrapper>False</IsWebBootstrapper>
     <TargetFrameworkProfile />
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <PublishUrl>\\192.168.1.118\OneDrive\_Dokumente\fotoleu 2023\fotoleuToolbox\publish\</PublishUrl>
+    <PublishUrl>\\192.168.1.118\OneDrive\_Dokumente\fotoleu 2026\fotoleuToolbox\publish\</PublishUrl>
     <InstallUrl />
     <TargetCulture>en</TargetCulture>
     <ApplicationVersion>4.0.0.7</ApplicationVersion>
@@ -49,7 +49,7 @@
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.7.2">
       <Visible>False</Visible>
-      <ProductName>Microsoft .NET Framework 4.7.2 %28x86 and x64%29</ProductName>
+      <ProductName>Microsoft .NET Framework 4.7.2 %28x86 und x64%29</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
     <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
@@ -59,7 +59,7 @@
     </BootstrapperPackage>
     <BootstrapperPackage Include="Microsoft.VSTORuntime.4.0">
       <Visible>False</Visible>
-      <ProductName>Microsoft Visual Studio 2010 Tools for Office Runtime %28x86 and x64%29</ProductName>
+      <ProductName>Microsoft Visual Studio 2010-Tools für Office-Laufzeit %28x86 und x64%29</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
@@ -96,6 +96,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <RegisterForComInterop>false</RegisterForComInterop>
+    <UseWinFormsOutOfProcDesigner>False</UseWinFormsOutOfProcDesigner>
   </PropertyGroup>
   <!--
     This section defines properties that are set when the "Release" configuration is selected.
@@ -122,6 +123,7 @@
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
     <RegisterForComInterop>true</RegisterForComInterop>
+    <UseWinFormsOutOfProcDesigner>False</UseWinFormsOutOfProcDesigner>
   </PropertyGroup>
   <!--
     This section specifies references for the project.
@@ -207,6 +209,7 @@
     <EmbeddedResource Include="RibbonButton.resx">
       <DependentUpon>RibbonButton.cs</DependentUpon>
     </EmbeddedResource>
+    <None Include="fotoleuToolbox publishing 2026.pfx" />
     <None Include="fotoleuToolboxSigning.pfx" />
     <None Include="fotoleuToolbox_TemporaryKey.pfx" />
     <None Include="Properties\Settings.settings">
