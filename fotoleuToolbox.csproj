@@ -242,6 +242,7 @@
     </Compile>
     <Compile Include="fotoleuToolbox.cs" />
     <Compile Include="SwissQrCodeInput.cs" />
+    <Compile Include="WordDocumentCleanup.cs" />
     <Compile Include="ThisAddIn.cs">
       <SubType>Code</SubType>
     </Compile>

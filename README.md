@@ -59,6 +59,10 @@ the existing Word templates, placeholders, bitmap handoff and invoice assembly:
   The supplied V5 Word/PDF test invoices were also decoded and compared with the
   debug output. Banking-app acceptance was additionally reported by the operator;
   this is not a SIX certification or proof of an executed payment.
+- **Trailing blank-page cleanup:** Generated documents and combined invoices
+  remove unprotected empty trailing paragraphs before saving. Word's required
+  final paragraph is retained with minimal spacing, including after a table.
+  Clipboard cleanup no longer inserts a space into the invoice.
 
 **Existing V4 and older workbooks require a migration.** Extend your productive
 workbook in place using the [structured-address instructions](#structured-addresses-for-swiss-qr-bills).
@@ -75,6 +79,21 @@ The main logic is in fotoleuToolbox.cs, which contains three main functions:
 1. generateAuftragsblatt: Generates a document, loads a word template and replaces placeholders with real values from excel table named "TabABBookmarks"
 2. generateQRCodeV2: Generates QR bitmap code, replaces them in the template and stores the newly generated file under the name passed by strFilePath.
 3. generateRechnung: Main function, combines the two methods generateAuftragsblatt and generateQRCodeV2 and creates combined final document.
+
+### Empty pages at the end of Word documents
+
+Before saving, the add-in removes redundant empty trailing paragraphs and formats
+the mandatory final paragraph at 1 pt with no extra spacing. This prevents an
+otherwise empty paragraph after the final table from creating an extra page.
+Only trailing whitespace is cleaned up; content, QR images and tables are retained.
+Section breaks, fields, bookmarks, content controls, anchored shapes, numbered or
+bordered paragraphs and tracked changes are preserved rather than deleted
+speculatively. Consequently, a blank page caused by a protected section break may
+still need a template adjustment.
+
+`SwissQRCode-Debug` reports the number of removed paragraphs and the page count
+before/after cleanup, or why cleanup was skipped. The same cleanup is applied to
+the individual generated documents and the final combined invoice.
 
 ## How to setup in your environment
 1. Install the published toolbox to add the "fotoleu Toolbox" ribbon to Excel.
@@ -212,6 +231,29 @@ without running macros or changing the workbook:
 
 ```powershell
 dotnet run --project .\tests\SwissQrCode.Tests.csproj -- --workbook "C:\path\fotoleu 2026.xlsm"
+```
+
+### Word cleanup integration checks
+
+The optional Word integration runner requires a working local Word installation
+and the .NET Framework 4.7.2 build tools. It starts its own Word instance and checks
+trailing blank paragraphs, the required paragraph after a table, and preservation
+of text, images, floating shapes, bookmarks, fields, sections, borders and tracked
+changes. It is separate from the Office-independent QR runner.
+
+From a Visual Studio Developer PowerShell:
+
+```powershell
+msbuild .\tests\WordCleanup\WordCleanup.Tests.csproj /t:Build /v:minimal
+.\tests\WordCleanup\bin\Debug\WordCleanup.Tests.exe
+```
+
+To additionally inspect a particular invoice, pass `--document` and `--output`.
+The input is opened read-only; a cleaned copy and before/after PDFs are saved in
+the output directory:
+
+```powershell
+.\tests\WordCleanup\bin\Debug\WordCleanup.Tests.exe --document "C:\path\invoice.docx" --output "C:\path\cleanup-check"
 ```
 
 # SwissQRCodeExcel

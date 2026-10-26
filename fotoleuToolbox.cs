@@ -281,11 +281,7 @@ namespace fotoleuToolbox
                         #region Empty clipbord
                         // avoid word asking to keep clipboard when closing
                         // avoid message box: "do you want to keep last item you copied" at exit of word.
-                        wordApp.Selection.ClearFormatting();
-                        wordApp.Selection.Find.ClearFormatting();
-                        wordApp.Selection.Find.Replacement.ClearFormatting();
-                        wordApp.Selection.InsertAfter(" ");  // select a "single" space
-                        wordApp.Selection.Copy();            // "empty" clipboard, with a "single" space
+                        Clipboard.SetText(" ");
                         #endregion
 
                         foreach (Microsoft.Office.Interop.Word.Section section in wordDocTarget.Sections)
@@ -312,6 +308,10 @@ namespace fotoleuToolbox
                             section.Footers[WdHeaderFooterIndex.wdHeaderFooterFirstPage].Range.Delete();
                             section.Footers[WdHeaderFooterIndex.wdHeaderFooterEvenPages].Range.Delete();
                         }
+
+                        strAddDebugInfo = "Removing empty trailing paragraphs from combined document";
+                        WordDocumentCleanup.RemoveEmptyTrailingParagraphs(wordDocTarget,
+                            message => printDebugMessage("generateRechnung: " + message, "generateRechnung"));
 
                         string strFileName = readBookmarkValue("Filename");
                         string strFilePath = readBookmarkValue("Filepath");
@@ -536,6 +536,9 @@ namespace fotoleuToolbox
                     strAddInfo = "wordDoc: Fields Update and Activate";
                     wordDoc.Fields.Update();
                     wordDoc.Activate();
+                    strAddInfo = "Removing empty trailing paragraphs";
+                    WordDocumentCleanup.RemoveEmptyTrailingParagraphs(wordDoc,
+                        message => printDebugMessage("generateDocument: " + message, "generateDocument"));
 
                     #region save document with filename and path read from excel sheet
                     strAddInfo = "save document with filename and path read from excel sheet";
