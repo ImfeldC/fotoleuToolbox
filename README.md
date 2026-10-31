@@ -95,6 +95,27 @@ still need a template adjustment.
 before/after cleanup, or why cleanup was skipped. The same cleanup is applied to
 the individual generated documents and the final combined invoice.
 
+### QR text file alongside the invoice
+
+The combined-invoice button automatically saves the exact payload used for its QR
+code alongside the saved Word invoice. For example, `Invoice.docx` produces
+`Invoice.qr.txt` in the same directory, using the `Filename` and `Filepath` values
+from `TabABBookmarks`. No new workbook keys are required. Regenerating the same
+invoice replaces its QR text file.
+
+The text uses UTF-8 without a BOM and preserves all QR field separators and empty
+fields. `SwissQRCode-Debug` reports the text file path. A text-export failure is
+reported explicitly; the already saved Word invoice remains on disk. No text file
+is generated if the combined invoice is not saved. The standalone QR-document
+button is unchanged, and temporary intermediate documents have no text sidecars.
+
+For the [SIX Swiss QR-bill validation portal](https://validation.iso-payments.ch/qrrechnung/validation),
+upload the `.qr.txt` file **only when all payment and customer data are fictitious,
+anonymized or synthetic**. The export contains the invoice's actual payment data;
+it does not anonymize anything. Real bank customer data, including historical
+data, must not be uploaded to the portal. Treat these text files as sensitive
+invoice data and store them with the same access restrictions as the invoices.
+
 ## How to setup in your environment
 1. Install the published toolbox to add the "fotoleu Toolbox" ribbon to Excel.
 2. Keep the existing `TabABBookmarks` and `TabQRCode` tables in your workbook.

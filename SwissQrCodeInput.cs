@@ -2,7 +2,9 @@ using QRCoder;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace fotoleuToolbox
 {
@@ -52,6 +54,16 @@ namespace fotoleuToolbox
         {
             using (var generator = new QRCodeGenerator())
                 return generator.CreateQrCode(Payload.ToString(), QRCodeGenerator.ECCLevel.M, forceUtf8: true);
+        }
+
+        internal string SavePayloadText(string documentPath)
+        {
+            if (string.IsNullOrWhiteSpace(documentPath))
+                throw new ArgumentException("A document path is required to save the QR text.", nameof(documentPath));
+
+            string textPath = Path.ChangeExtension(documentPath, ".qr.txt");
+            File.WriteAllText(textPath, Payload.ToString(), new UTF8Encoding(false, true));
+            return textPath;
         }
 
         private static PayloadGenerator.SwissQrCode.Contact ReadContact(

@@ -68,6 +68,11 @@ namespace fotoleuToolbox
         /// <param name="strFilePath">Target filename for newly created document.</param>
         public static void generateQRCodeV2(string strFilePath, bool bShowWord)
         {
+            generateQRCodeDocument(strFilePath, bShowWord);
+        }
+
+        private static SwissQrCodeInput generateQRCodeDocument(string strFilePath, bool bShowWord)
+        {
             Boolean bDebug = openDebugSheet();
             printDebugMessage("generateQRCode: Started .... (Toolbox Version: " + getCurrentToolboxVersion() + ")", "generateQRCodeV2");
 
@@ -148,6 +153,7 @@ namespace fotoleuToolbox
 
                         // delete temporary picture
                         File.Delete(picturePath);
+                        return input;
                     }
 
                 }
@@ -169,6 +175,7 @@ namespace fotoleuToolbox
                 printDebugMessage("generateQRCode: Cannot read 'Version' with 'readBookmarkValue'", "generateQRCodeV2");
                 MessageBox.Show("Please open a valid fotoleu excel workbook, which contains OR code value table!", "Swiss QR Code Generator", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
+            return null;
         }
 
         /// <summary>
@@ -219,7 +226,7 @@ namespace fotoleuToolbox
                         printDebugMessage("generateRechnung: The first file has NOT been created! File1=" + strFile1, "generateRechnung");
                     }
                     #endregion
-                    generateQRCodeV2(strFile2, false);   // generate QR code document
+                    SwissQrCodeInput qrInput = generateQRCodeDocument(strFile2, false);   // generate QR code document
                     #region Check that file exists
                     if (File.Exists(strFile2))
                     {
@@ -231,7 +238,7 @@ namespace fotoleuToolbox
                     }
                     #endregion
 
-                    if (File.Exists(strFile1) && File.Exists(strFile2))
+                    if (File.Exists(strFile1) && File.Exists(strFile2) && qrInput != null)
                     {
                         wordApp = new Microsoft.Office.Interop.Word.Application();
                         strAddDebugInfo = "Word Application created!";
@@ -322,6 +329,19 @@ namespace fotoleuToolbox
                         {
                             wordDocTarget.SaveAs2(strFileTarget);
                             printDebugMessage("generateRechnung: Target file has been saved! strFileTarget=" + strFileTarget, "generateRechnung");
+                            strAddDebugInfo = "Invoice saved; saving QR text next to " + strFileTarget;
+                            try
+                            {
+                                string qrTextPath = qrInput.SavePayloadText(strFileTarget);
+                                printDebugMessage("generateRechnung: QR text saved (UTF-8 without BOM)! Path=" + qrTextPath,
+                                    "generateRechnung");
+                            }
+                            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException ||
+                                ex is ArgumentException || ex is NotSupportedException)
+                            {
+                                throw new IOException("The invoice was saved to '" + strFileTarget +
+                                    "', but its QR text file could not be saved: " + ex.Message, ex);
+                            }
                         }
                         else
                         {

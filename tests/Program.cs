@@ -32,6 +32,7 @@ internal static class Program
             Run("Normal IBAN, QR-IBAN and SCOR validation", AccountsAndReferences);
             Run("Amount bounds, precision and culture-independent numeric Excel values", Amounts);
             Run("UTF-8 bytes, no BOM and ECC M decoded from QR modules", DecodeModules);
+            Run("Invoice QR text preserves exact UTF-8 payload and reports save failures", SavePayloadText);
             Run("QR bitmap with Swiss cross decodes correctly", DecodeBitmap);
             Run("Bundled V5 workbook generates a structured QR, including without house numbers", BundledWorkbook);
 
@@ -319,6 +320,60 @@ internal static class Program
         Equal(values["DebitorStreet"], lines[22]);
         Equal("", lines[23]);
         DecodeInput(withoutHouseNumbers);
+    }
+
+    private static void SavePayloadText()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "SwissQrText-" + Guid.NewGuid());
+        Directory.CreateDirectory(directory);
+        string documentPath = Path.Combine(directory, "Invoice.DOCX");
+        string textPath = Path.Combine(directory, "Invoice.qr.txt");
+        try
+        {
+            foreach (bool emptyOptionalFields in new[] { false, true })
+            {
+                var values = ValidValues();
+                values["ContactName"] = "M\u00fcller GmbH";
+                values["DebitorCity"] = "Z\u00fcrich";
+                if (emptyOptionalFields)
+                {
+                    values["ContactHouseNumber"] = "";
+                    values["DebitorHouseNumber"] = "";
+                    values["SCOR"] = "";
+                }
+                var input = new SwissQrCodeInput(values);
+                File.WriteAllText(documentPath, "Existing invoice");
+                File.WriteAllText(textPath, "Old payload");
+                Equal(textPath, input.SavePayloadText(documentPath));
+                Equal("Existing invoice", File.ReadAllText(documentPath));
+                EqualBytes(Encoding.UTF8.GetBytes(input.Payload.ToString()), File.ReadAllBytes(textPath));
+                DecodeInput(input);
+            }
+
+            var validInput = new SwissQrCodeInput(ValidValues());
+            try
+            {
+                validInput.SavePayloadText(Path.Combine(directory, "Missing", "Invoice.docx"));
+                throw new Exception("Saving to a missing directory must fail.");
+            }
+            catch (DirectoryNotFoundException)
+            {
+            }
+            try
+            {
+                validInput.SavePayloadText("");
+                throw new Exception("Saving without a document path must fail.");
+            }
+            catch (ArgumentException)
+            {
+            }
+        }
+        finally
+        {
+            File.Delete(textPath);
+            File.Delete(documentPath);
+            Directory.Delete(directory);
+        }
     }
 
     private static IDictionary<string, object> ReadWorkbook(string path)
